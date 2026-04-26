@@ -52,14 +52,23 @@ const STATUS_TONE: Record<WorkoutSession['status'], string> = {
 
 const SessionsTab: React.FC = () => {
   const { data: sessions = [], isLoading } = useSessions();
+  const { data: workouts = [] } = useWorkouts();
   const updateSession = useUpdateSession();
+  const createSession = useCreateSession();
   const deleteSession = useDeleteSession();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('All');
   const [editing, setEditing] = useState<WorkoutSession | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WorkoutSession | null>(null);
+
+  // New-session dialog state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newWorkoutId, setNewWorkoutId] = useState('');
+  const [newStartedAt, setNewStartedAt] = useState(() => fmtDateTimeLocal(new Date().toISOString()));
+  const [isCreating, setIsCreating] = useState(false);
 
   // Edit form state
   const [startedAt, setStartedAt] = useState('');
