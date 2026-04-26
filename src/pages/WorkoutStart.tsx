@@ -77,6 +77,7 @@ const WorkoutStart = () => {
     }
     setExerciseLogs(logs);
     setSessionActive(true);
+    startedAtRef.current = new Date().toISOString();
     setExpandedBlock(workout.blocks[0]?.id || null);
   };
 
@@ -101,7 +102,6 @@ const WorkoutStart = () => {
       for (const block of workout.blocks) {
         for (const item of block.items) {
           const key = `${block.id}_${item.id}`;
-          const profile = getProfileForExercise(item.exerciseId);
           exercises.push({
             exerciseId: item.exerciseId,
             exerciseName: getExerciseName(item.exerciseId),
@@ -112,21 +112,30 @@ const WorkoutStart = () => {
           });
         }
       }
+      const metrics: SessionMetrics = {
+        activeCalories: activeCalories ? Number(activeCalories) : undefined,
+        totalCalories: totalCalories ? Number(totalCalories) : undefined,
+        avgHeartRate: avgHeartRate ? Number(avgHeartRate) : undefined,
+        rpe: rpe ? Number(rpe) : undefined,
+      };
       const session = await createSession.mutateAsync({
         workoutId: workout.id,
         workoutName: workout.name,
         status: 'completed',
-        startedAt: new Date().toISOString(),
+        startedAt: startedAtRef.current || new Date().toISOString(),
         completedAt: new Date().toISOString(),
         exercises,
+        metrics,
+        notes: notes || undefined,
       });
 
-      const newRecs = await analyzeSession.mutateAsync(session.id);
+      await analyzeSession.mutateAsync(session.id);
       toast({
         title: 'Workout Complete!',
-        description: `${newRecs.length} new insight${newRecs.length !== 1 ? 's' : ''} generated.`,
+        description: 'Insights generated. Review your session breakdown.',
       });
-      navigate('/workouts');
+      setFinishOpen(false);
+      navigate(`/sessions/${session.id}`);
     } catch {
       toast({ title: 'Error', description: 'Failed to save session', variant: 'destructive' });
     } finally {
@@ -156,8 +165,8 @@ const WorkoutStart = () => {
               <Play className="mr-2 h-5 w-5" />Begin Session
             </Button>
           ) : (
-            <Button size="lg" onClick={completeSession} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Save className="mr-2 h-5 w-5" />{isSaving ? 'Saving...' : 'Complete Workout'}
+            <Button size="lg" onClick={() => setFinishOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Save className="mr-2 h-5 w-5" />Complete Workout
             </Button>
           )}
         </div>
