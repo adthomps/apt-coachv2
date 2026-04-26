@@ -14,9 +14,11 @@ import {
   Zap, Clock, ChevronDown, ChevronUp, Save, PauseCircle,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
-import { useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations, useCreateSession, useUpdateSession, useSession, useAnalyzeSession } from '@/hooks/use-api-queries';
+import {
+  useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations,
+  useCreateSession, useUpdateSession, useSession, useAnalyzeSession, queryKeys,
+} from '@/hooks/use-api-queries';
 import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/hooks/use-api-queries';
 import type { SessionExerciseLog, SessionSetLog, SessionMetrics } from '@/lib/api/types';
 import { shiftScheduleForSession } from '@/lib/schedule-sync';
 import { toast } from '@/hooks/use-toast';
