@@ -430,6 +430,8 @@ export const mockSessions: WorkoutSession[] = [
   {
     id: 'sess_6', workoutId: 'wk_2', workoutName: 'Upper Body Pull', programId: 'prog_1',
     status: 'completed', startedAt: '2024-06-19T07:00:00Z', completedAt: '2024-06-19T07:55:00Z',
+    metrics: { activeCalories: 345, totalCalories: 448, avgHeartRate: 124, rpe: 6 },
+    notes: 'Felt strong on deadlifts. Bar speed crisp.',
     exercises: [
       { exerciseId: 'ex_3', exerciseName: 'Conventional Deadlift', plannedSets: 4, plannedRepsMin: 3, plannedRepsMax: 5, plannedWeight: 315,
         actualSets: [
