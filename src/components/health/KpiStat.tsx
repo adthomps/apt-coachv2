@@ -1,7 +1,9 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import DeltaValue from './DeltaValue';
+import MetricExplainer from './MetricExplainer';
 import { cn } from '@/lib/utils';
+import type { MetricKey } from '@/lib/health/metric-glossary';
 
 interface KpiStatProps {
   icon: React.ReactNode;
@@ -11,12 +13,14 @@ interface KpiStatProps {
   deltaSuffix?: string;
   /** When true, a negative delta is "good". */
   invertDelta?: boolean;
+  /** Optional glossary key — renders an expandable "What this means" disclosure. */
+  metricKey?: MetricKey;
   className?: string;
 }
 
-/** APT shared at-a-glance KPI card. Same shape across all health tabs. */
+/** APT shared at-a-glance KPI card. Same shape across all health surfaces. */
 const KpiStat: React.FC<KpiStatProps> = ({
-  icon, label, value, delta, deltaSuffix = '', invertDelta = false, className,
+  icon, label, value, delta, deltaSuffix = '', invertDelta = false, metricKey, className,
 }) => (
   <Card className={cn('apt-hover-lift', className)}>
     <CardContent className="pt-6">
@@ -28,6 +32,7 @@ const KpiStat: React.FC<KpiStatProps> = ({
       {typeof delta === 'number' && (
         <DeltaValue value={delta} suffix={deltaSuffix} invert={invertDelta} />
       )}
+      {metricKey && <MetricExplainer metricKey={metricKey} compact />}
     </CardContent>
   </Card>
 );
