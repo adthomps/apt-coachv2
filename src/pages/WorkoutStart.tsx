@@ -304,6 +304,47 @@ const WorkoutStart = () => {
           </Card>
         ))}
       </div>
+
+      <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Complete Workout</DialogTitle>
+            <DialogDescription>
+              Capture wearable data and effort. All fields are optional — you can edit later from the session detail page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="ac">Active Calories</Label>
+                <Input id="ac" type="number" min="0" value={activeCalories} onChange={(e) => setActiveCalories(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tc">Total Calories</Label>
+                <Input id="tc" type="number" min="0" value={totalCalories} onChange={(e) => setTotalCalories(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="hr">Avg Heart Rate (BPM)</Label>
+                <Input id="hr" type="number" min="0" value={avgHeartRate} onChange={(e) => setAvgHeartRate(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="rpe">Effort (RPE 1–10)</Label>
+                <Input id="rpe" type="number" min="1" max="10" step="0.5" value={rpe} onChange={(e) => setRpe(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea id="notes" rows={3} placeholder="How did it feel?" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFinishOpen(false)}>Cancel</Button>
+            <Button onClick={completeSession} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Save className="mr-2 h-4 w-4" />{isSaving ? 'Saving…' : 'Save & View Insights'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
