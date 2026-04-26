@@ -111,12 +111,6 @@ const LibraryTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />Add Exercise
-        </Button>
-      </div>
-
       <ListToolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -126,6 +120,11 @@ const LibraryTab: React.FC = () => {
         onFilterChange={setPattern}
         resultCount={filtered.length}
         resultLabel="exercises"
+        action={
+          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />Add Exercise
+          </Button>
+        }
       />
 
       {isLoading ? (
