@@ -515,132 +515,135 @@ const ProgramsTab: React.FC = () => {
       )}
 
       {/* Create / Edit dialog */}
-      <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Program' : 'Create Program'}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2"><Label>Name</Label>
-              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g., 8-Week Recomp" />
-            </div>
-            <div className="space-y-2"><Label>Description</Label>
-              <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Duration (weeks)</Label>
-                <Input type="number" min={1} max={52} value={formDuration} onChange={(e) => setFormDuration(parseInt(e.target.value) || 8)} />
-              </div>
-              <div className="space-y-2"><Label>Goal</Label>
-                <Select value={formGoal} onValueChange={(v) => setFormGoal(v as Program['goal'])}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(GOAL_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2"><Label>Difficulty</Label>
-              <Select value={formDifficulty} onValueChange={(v) => setFormDifficulty(v as Program['difficulty'])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button className="w-full" onClick={handleSubmit} disabled={!formName}>
-              {editing ? 'Save Changes' : 'Create Program'}
-            </Button>
+      <FormDialog
+        open={formOpen}
+        onOpenChange={(o) => { setFormOpen(o); if (!o) resetForm(); }}
+        title={editing ? 'Edit Program' : 'Create Program'}
+        description="Configure program duration, training goal, and difficulty."
+        size="md"
+        submitLabel={editing ? 'Save Changes' : 'Create Program'}
+        onSubmit={handleSubmit}
+        canSubmit={!!formName}
+      >
+        <div className="space-y-2">
+          <Label>Name</Label>
+          <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g., 8-Week Recomp" />
+        </div>
+        <div className="space-y-2">
+          <Label>Description</Label>
+          <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} rows={2} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Duration (weeks)</Label>
+            <Input type="number" min={1} max={52} value={formDuration} onChange={(e) => setFormDuration(parseInt(e.target.value) || 8)} />
           </div>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-2">
+            <Label>Goal</Label>
+            <Select value={formGoal} onValueChange={(v) => setFormGoal(v as Program['goal'])}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(GOAL_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Difficulty</Label>
+          <Select value={formDifficulty} onValueChange={(v) => setFormDifficulty(v as Program['difficulty'])}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="beginner">Beginner</SelectItem>
+              <SelectItem value="intermediate">Intermediate</SelectItem>
+              <SelectItem value="advanced">Advanced</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </FormDialog>
 
       {/* Days dialog */}
-      <Dialog open={daysOpen} onOpenChange={setDaysOpen}>
-        <DialogContent className="sm:max-w-[640px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Training Days</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {editDays.length === 0 && (
-              <div className="text-center py-6 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
-                No days yet. Add a training or rest day below.
-              </div>
-            )}
-
-            {editDays.map((day, i) => (
-              <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-foreground w-14 shrink-0">Day {day.dayNumber}</span>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={day.isRestDay}
-                      onCheckedChange={(v) => updateDay(i, { isRestDay: v, workoutId: v ? undefined : day.workoutId })}
-                    />
-                    <span className="text-xs text-muted-foreground">Rest</span>
-                  </div>
-                  {!day.isRestDay ? (
-                    <Select value={day.workoutId || ''} onValueChange={(v) => updateDay(i, { workoutId: v || undefined })}>
-                      <SelectTrigger className="flex-1 h-9"><SelectValue placeholder="Select workout" /></SelectTrigger>
-                      <SelectContent>
-                        {workouts.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <span className="text-sm text-muted-foreground italic flex-1">Rest Day</span>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    title="Duplicate day"
-                    onClick={() =>
-                      setEditDays((prev) => {
-                        const copy = { ...prev[i] };
-                        const next = [...prev.slice(0, i + 1), copy, ...prev.slice(i + 1)];
-                        return next.map((d, idx) => ({ ...d, dayNumber: idx + 1 }));
-                      })
-                    }
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
-                    title="Remove day"
-                    onClick={() =>
-                      setEditDays((prev) =>
-                        prev.filter((_, idx) => idx !== i).map((d, idx) => ({ ...d, dayNumber: idx + 1 })),
-                      )
-                    }
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Input
-                  value={day.notes || ''}
-                  onChange={(e) => updateDay(i, { notes: e.target.value || undefined })}
-                  placeholder="Notes (e.g., focus on tempo, deload week)…"
-                  className="h-8 text-sm"
-                />
-              </div>
-            ))}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditDays((prev) => [...prev, { dayNumber: prev.length + 1, isRestDay: false }])}
-            >
-              <Plus className="mr-2 h-3 w-3" />Add Day
-            </Button>
+      <FormDialog
+        open={daysOpen}
+        onOpenChange={setDaysOpen}
+        title="Edit Training Days"
+        description="Assign workouts to days, mark rest days, or duplicate a day."
+        size="lg"
+        submitLabel="Save Days"
+        onSubmit={handleSaveDays}
+      >
+        {editDays.length === 0 && (
+          <div className="text-center py-6 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
+            No days yet. Add a training or rest day below.
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDaysOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveDays}>Save Days</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
+
+        {editDays.map((day, i) => (
+          <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-foreground w-14 shrink-0">Day {day.dayNumber}</span>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={day.isRestDay}
+                  onCheckedChange={(v) => updateDay(i, { isRestDay: v, workoutId: v ? undefined : day.workoutId })}
+                />
+                <span className="text-xs text-muted-foreground">Rest</span>
+              </div>
+              {!day.isRestDay ? (
+                <Select value={day.workoutId || ''} onValueChange={(v) => updateDay(i, { workoutId: v || undefined })}>
+                  <SelectTrigger className="flex-1 h-9"><SelectValue placeholder="Select workout" /></SelectTrigger>
+                  <SelectContent>
+                    {workouts.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-sm text-muted-foreground italic flex-1">Rest Day</span>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                title="Duplicate day"
+                onClick={() =>
+                  setEditDays((prev) => {
+                    const copy = { ...prev[i] };
+                    const next = [...prev.slice(0, i + 1), copy, ...prev.slice(i + 1)];
+                    return next.map((d, idx) => ({ ...d, dayNumber: idx + 1 }));
+                  })
+                }
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                title="Remove day"
+                onClick={() =>
+                  setEditDays((prev) =>
+                    prev.filter((_, idx) => idx !== i).map((d, idx) => ({ ...d, dayNumber: idx + 1 })),
+                  )
+                }
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <Input
+              value={day.notes || ''}
+              onChange={(e) => updateDay(i, { notes: e.target.value || undefined })}
+              placeholder="Notes (e.g., focus on tempo, deload week)…"
+              className="h-8 text-sm"
+            />
+          </div>
+        ))}
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setEditDays((prev) => [...prev, { dayNumber: prev.length + 1, isRestDay: false }])}
+        >
+          <Plus className="mr-2 h-3 w-3" />Add Day
+        </Button>
+      </FormDialog>
 
       <DeleteConfirmDialog
         open={!!deleteTarget}
