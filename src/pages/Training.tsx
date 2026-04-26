@@ -238,12 +238,6 @@ const WorkoutsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />Create Workout
-        </Button>
-      </div>
-
       <ListToolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -253,6 +247,11 @@ const WorkoutsTab: React.FC = () => {
         onFilterChange={setDifficulty}
         resultCount={filtered.length}
         resultLabel="workouts"
+        action={
+          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />Create Workout
+          </Button>
+        }
       />
 
       {isLoading ? (
