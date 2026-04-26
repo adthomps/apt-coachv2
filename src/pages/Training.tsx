@@ -553,28 +553,81 @@ const ProgramsTab: React.FC = () => {
 
       {/* Days dialog */}
       <Dialog open={daysOpen} onOpenChange={setDaysOpen}>
-        <DialogContent className="sm:max-w-[560px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Edit Training Days</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-[640px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Training Days</DialogTitle>
+          </DialogHeader>
           <div className="space-y-3 py-2">
+            {editDays.length === 0 && (
+              <div className="text-center py-6 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
+                No days yet. Add a training or rest day below.
+              </div>
+            )}
+
             {editDays.map((day, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border">
-                <span className="text-sm font-medium text-foreground w-14 shrink-0">Day {day.dayNumber}</span>
-                <div className="flex items-center gap-2">
-                  <Switch checked={day.isRestDay} onCheckedChange={(v) => updateDay(i, { isRestDay: v, workoutId: v ? undefined : day.workoutId })} />
-                  <span className="text-xs text-muted-foreground">Rest</span>
+              <div key={i} className="p-3 rounded-lg border border-border bg-card space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-foreground w-14 shrink-0">Day {day.dayNumber}</span>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={day.isRestDay}
+                      onCheckedChange={(v) => updateDay(i, { isRestDay: v, workoutId: v ? undefined : day.workoutId })}
+                    />
+                    <span className="text-xs text-muted-foreground">Rest</span>
+                  </div>
+                  {!day.isRestDay ? (
+                    <Select value={day.workoutId || ''} onValueChange={(v) => updateDay(i, { workoutId: v || undefined })}>
+                      <SelectTrigger className="flex-1 h-9"><SelectValue placeholder="Select workout" /></SelectTrigger>
+                      <SelectContent>
+                        {workouts.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-sm text-muted-foreground italic flex-1">Rest Day</span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    title="Duplicate day"
+                    onClick={() =>
+                      setEditDays((prev) => {
+                        const copy = { ...prev[i] };
+                        const next = [...prev.slice(0, i + 1), copy, ...prev.slice(i + 1)];
+                        return next.map((d, idx) => ({ ...d, dayNumber: idx + 1 }));
+                      })
+                    }
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                    title="Remove day"
+                    onClick={() =>
+                      setEditDays((prev) =>
+                        prev.filter((_, idx) => idx !== i).map((d, idx) => ({ ...d, dayNumber: idx + 1 })),
+                      )
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                {!day.isRestDay && (
-                  <Select value={day.workoutId || ''} onValueChange={(v) => updateDay(i, { workoutId: v || undefined })}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select workout" /></SelectTrigger>
-                    <SelectContent>
-                      {workouts.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
-                {day.isRestDay && <span className="text-sm text-muted-foreground italic flex-1">Rest Day</span>}
+                <Input
+                  value={day.notes || ''}
+                  onChange={(e) => updateDay(i, { notes: e.target.value || undefined })}
+                  placeholder="Notes (e.g., focus on tempo, deload week)…"
+                  className="h-8 text-sm"
+                />
               </div>
             ))}
-            <Button variant="outline" size="sm" onClick={() => setEditDays((prev) => [...prev, { dayNumber: prev.length + 1, isRestDay: false }])}>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditDays((prev) => [...prev, { dayNumber: prev.length + 1, isRestDay: false }])}
+            >
               <Plus className="mr-2 h-3 w-3" />Add Day
             </Button>
           </div>
