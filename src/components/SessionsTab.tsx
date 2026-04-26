@@ -376,7 +376,7 @@ const SessionsTab: React.FC = () => {
         onOpenChange={setCreateOpen}
         title="New Session"
         description="Pick a workout and start time. The session opens in progress so you can log sets live."
-        size="sm"
+        size="md"
         submitLabel="Start Session"
         onSubmit={handleCreate}
         isSubmitting={isCreating}
