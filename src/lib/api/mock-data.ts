@@ -311,6 +311,30 @@ export const mockSnapshots: Snapshot[] = [
     rawJson: JSON.stringify({ source: 'bodyspec', scan_date: '2024-07-15', total_mass_lbs: 185.2, fat_mass_lbs: 26.0, lean_mass_lbs: 152.1, bone_mass_lbs: 7.1, body_fat_pct: 14.0 }),
     createdAt: '2024-07-15T10:00:00Z',
   },
+  // Withings smart-scale weekly readings — interleaved with DEXA scans for trend visibility.
+  {
+    id: 'snap_w1', scanDate: '2024-07-22', provider: 'Withings',
+    bodyComposition: { totalMass: 184.6, fatMass: 25.4, leanMass: 152.1, boneMass: 7.1, bodyFatPercentage: 13.8 },
+    regionalData: [],
+    rawJson: JSON.stringify({ source: 'withings', weight: 184.6, bodyFatPct: 13.8 }),
+    notes: 'Morning, fasted.',
+    createdAt: '2024-07-22T07:15:00Z',
+  },
+  {
+    id: 'snap_w2', scanDate: '2024-07-29', provider: 'Withings',
+    bodyComposition: { totalMass: 184.0, fatMass: 24.7, leanMass: 152.2, boneMass: 7.1, bodyFatPercentage: 13.4 },
+    regionalData: [],
+    rawJson: JSON.stringify({ source: 'withings', weight: 184.0, bodyFatPct: 13.4 }),
+    createdAt: '2024-07-29T07:10:00Z',
+  },
+  {
+    id: 'snap_w3', scanDate: '2024-08-05', provider: 'Withings',
+    bodyComposition: { totalMass: 183.6, fatMass: 24.2, leanMass: 152.3, boneMass: 7.1, bodyFatPercentage: 13.2 },
+    regionalData: [],
+    rawJson: JSON.stringify({ source: 'withings', weight: 183.6, bodyFatPct: 13.2 }),
+    notes: 'Post-deload week.',
+    createdAt: '2024-08-05T07:05:00Z',
+  },
 ];
 
 export const mockImportJobs: ImportJob[] = [

@@ -27,6 +27,7 @@ import {
   useExercises, useCreateExercise, useUpdateExercise, useDeleteExercise,
   useWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout,
   usePrograms, useCreateProgram, useUpdateProgram, useDeleteProgram,
+  useSessions,
 } from '@/hooks/use-api-queries';
 import type {
   Exercise, CreateExerciseInput, MovementPattern,
@@ -204,9 +205,21 @@ const LibraryTab: React.FC = () => {
 
 const WorkoutsTab: React.FC = () => {
   const { data: workouts = [], isLoading } = useWorkouts();
+  const { data: sessions = [] } = useSessions();
   const createMutation = useCreateWorkout();
   const updateMutation = useUpdateWorkout();
   const deleteMutation = useDeleteWorkout();
+
+  // Map workoutId -> most recent in-progress session (for Resume CTA)
+  const inProgressByWorkout = React.useMemo(() => {
+    const map = new Map<string, typeof sessions[number]>();
+    for (const s of sessions) {
+      if (s.status !== 'in_progress') continue;
+      const existing = map.get(s.workoutId);
+      if (!existing || s.startedAt > existing.startedAt) map.set(s.workoutId, s);
+    }
+    return map;
+  }, [sessions]);
 
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('All');
@@ -275,12 +288,19 @@ const WorkoutsTab: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((w) => {
             const totalExercises = w.blocks.reduce((s, b) => s + b.items.length, 0);
+            const inProgress = inProgressByWorkout.get(w.id);
             return (
               <EntityCard
                 key={w.id}
                 title={w.name}
                 subtitle={w.description}
-                badge={<StatusBadge tone={w.difficulty} />}
+                badge={
+                  inProgress ? (
+                    <Badge variant="outline" className="border-primary/40 text-primary">In progress</Badge>
+                  ) : (
+                    <StatusBadge tone={w.difficulty} />
+                  )
+                }
                 body={
                   <>
                     <div className="grid grid-cols-3 gap-2 text-center">
@@ -297,7 +317,12 @@ const WorkoutsTab: React.FC = () => {
                         <p className="text-xs text-muted-foreground">Blocks</p>
                       </div>
                     </div>
-                    {w.blocks.length > 0 && (
+                    {inProgress && (
+                      <div className="text-xs p-2 bg-primary/10 border border-primary/20 rounded text-foreground">
+                        Resume your session from {new Date(inProgress.startedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}.
+                      </div>
+                    )}
+                    {!inProgress && w.blocks.length > 0 && (
                       <div className="space-y-1.5">
                         {w.blocks.slice(0, 3).map((b) => (
                           <div key={b.id} className="flex items-center justify-between text-xs p-2 bg-muted/30 rounded">
@@ -311,11 +336,19 @@ const WorkoutsTab: React.FC = () => {
                 }
                 footer={
                   <>
-                    <Link to={`/workouts/${w.id}/start`} className="flex-1">
-                      <Button variant="default" size="sm" className="w-full">
-                        <Play className="mr-1 h-3 w-3" />Start
-                      </Button>
-                    </Link>
+                    {inProgress ? (
+                      <Link to={`/workouts/${w.id}/start?resume=${inProgress.id}`} className="flex-1">
+                        <Button variant="default" size="sm" className="w-full">
+                          <Play className="mr-1 h-3 w-3" />Resume
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link to={`/workouts/${w.id}/start`} className="flex-1">
+                        <Button variant="default" size="sm" className="w-full">
+                          <Play className="mr-1 h-3 w-3" />Start
+                        </Button>
+                      </Link>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => { setEditing(w); setDialogOpen(true); }}>
                       <Pencil className="h-3 w-3" />
                     </Button>
