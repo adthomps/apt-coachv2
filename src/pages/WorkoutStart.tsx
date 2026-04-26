@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 import {
   ArrowLeft, Play, CheckCircle, Dumbbell, TrendingUp,
   Zap, Clock, ChevronDown, ChevronUp, Save
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations, useCreateSession, useAnalyzeSession } from '@/hooks/use-api-queries';
-import type { SessionExerciseLog, SessionSetLog } from '@/lib/api/types';
+import type { SessionExerciseLog, SessionSetLog, SessionMetrics } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
 const WorkoutStart = () => {
@@ -27,10 +32,15 @@ const WorkoutStart = () => {
   const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, SessionSetLog[]>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const startedAtRef = useRef<string | null>(null);
 
-  // Filter recommendations for exercises in this workout
-  const exerciseIds = new Set(workout?.blocks.flatMap(b => b.items.map(i => i.exerciseId)) || []);
-  const recommendations = allRecs.filter(r => !r.targetExerciseId || exerciseIds.has(r.targetExerciseId));
+  // Finish dialog state
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [activeCalories, setActiveCalories] = useState('');
+  const [totalCalories, setTotalCalories] = useState('');
+  const [avgHeartRate, setAvgHeartRate] = useState('');
+  const [rpe, setRpe] = useState('');
+  const [notes, setNotes] = useState('');
 
   const getExerciseName = (exerciseId: string) => {
     const profile = profiles.find(p => p.exerciseId === exerciseId);
