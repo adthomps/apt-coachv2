@@ -42,6 +42,10 @@ const WorkoutStart = () => {
   const [rpe, setRpe] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Filter recommendations for exercises in this workout
+  const exerciseIds = new Set(workout?.blocks.flatMap(b => b.items.map(i => i.exerciseId)) || []);
+  const recommendations = allRecs.filter(r => !r.targetExerciseId || exerciseIds.has(r.targetExerciseId));
+
   const getExerciseName = (exerciseId: string) => {
     const profile = profiles.find(p => p.exerciseId === exerciseId);
     if (profile) return profile.exerciseName;
