@@ -30,16 +30,26 @@ import { toast } from '@/hooks/use-toast';
 const isWithings = (s: Snapshot) => (s.provider || '').toLowerCase() === 'withings';
 
 const Health: React.FC = () => {
-  const { data: snapshots = [], isLoading: snapsLoading } = useSnapshots();
+  const { data: allSnapshots = [], isLoading: snapsLoading } = useSnapshots();
   const { data: panels = [], isLoading: panelsLoading } = useBloodPanels();
   const deleteSnapshot = useDeleteSnapshot();
   const deletePanel = useDeleteBloodPanel();
+
+  // Split smart-scale (Withings) readings from DEXA scans so each tab is focused.
+  const dexaScans = useMemo(() => allSnapshots.filter((s) => !isWithings(s)), [allSnapshots]);
+  const withingsReadings = useMemo(
+    () => allSnapshots.filter(isWithings).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
+    [allSnapshots],
+  );
+  // The "scans" tab continues to compare against its own series (DEXA only).
+  const snapshots = dexaScans;
 
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
   const [comparison, setComparison] = useState<ProgressCompare | null>(null);
   const [deleteScanTarget, setDeleteScanTarget] = useState<Snapshot | null>(null);
   const [deletePanelTarget, setDeletePanelTarget] = useState<BloodPanel | null>(null);
+  const [withingsImportOpen, setWithingsImportOpen] = useState(false);
 
   const selectedScan = useMemo(
     () => (selectedScanId ? snapshots.find((s) => s.id === selectedScanId) : snapshots[0]) || null,
@@ -78,7 +88,11 @@ const Health: React.FC = () => {
     );
   }
 
-  const defaultTab = snapshots.length > 0 ? 'scans' : panels.length > 0 ? 'blood' : 'scans';
+  const defaultTab =
+    snapshots.length > 0 ? 'scans'
+    : withingsReadings.length > 0 ? 'withings'
+    : panels.length > 0 ? 'blood'
+    : 'scans';
 
   const formatChange = (v: number, suffix = '') => `${v > 0 ? '+' : ''}${v.toFixed(1)}${suffix}`;
   const changeColor = (v: number, invert = false) => {
@@ -86,13 +100,23 @@ const Health: React.FC = () => {
     return Math.abs(v) < 0.5 ? 'text-muted-foreground' : positive ? 'text-success' : 'text-destructive';
   };
 
+  // Withings trend deltas (latest vs previous reading).
+  const withingsLatest = withingsReadings[0];
+  const withingsPrev = withingsReadings[1];
+  const withingsDelta = withingsLatest && withingsPrev ? {
+    weight: withingsLatest.bodyComposition.totalMass - withingsPrev.bodyComposition.totalMass,
+    bf: withingsLatest.bodyComposition.bodyFatPercentage - withingsPrev.bodyComposition.bodyFatPercentage,
+    lean: withingsLatest.bodyComposition.leanMass - withingsPrev.bodyComposition.leanMass,
+    fat: withingsLatest.bodyComposition.fatMass - withingsPrev.bodyComposition.fatMass,
+  } : null;
+
   return (
     <Layout>
       <div className="space-y-6">
         <PageHeader
           title="Health Data"
           icon={<Activity className="h-8 w-8 text-primary" />}
-          description="Body composition scans and blood marker panels — view-only. Imports live in Admin."
+          description="Body composition scans, smart-scale trends, and blood marker panels."
           actions={
             <Link to="/admin?tab=imports">
               <Button variant="outline"><Upload className="mr-2 h-4 w-4" />Import in Admin</Button>
@@ -103,14 +127,17 @@ const Health: React.FC = () => {
         <Tabs defaultValue={defaultTab}>
           <TabsList>
             <TabsTrigger value="scans">
-              <Activity className="mr-1.5 h-4 w-4" />Body Scans ({snapshots.length})
+              <Activity className="mr-1.5 h-4 w-4" />DEXA Scans ({snapshots.length})
+            </TabsTrigger>
+            <TabsTrigger value="withings">
+              <Scale className="mr-1.5 h-4 w-4" />Withings ({withingsReadings.length})
             </TabsTrigger>
             <TabsTrigger value="blood">
               <Droplets className="mr-1.5 h-4 w-4" />Blood Panels ({panels.length})
             </TabsTrigger>
           </TabsList>
 
-          {/* ============ Body Scans ============ */}
+          {/* ============ DEXA Scans ============ */}
           <TabsContent value="scans" className="mt-6">
             {snapshots.length === 0 ? (
               <EmptyState
