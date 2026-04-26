@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,27 +11,33 @@ import {
 } from '@/components/ui/dialog';
 import {
   ArrowLeft, Play, CheckCircle, Dumbbell, TrendingUp,
-  Zap, Clock, ChevronDown, ChevronUp, Save
+  Zap, Clock, ChevronDown, ChevronUp, Save, PauseCircle,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
-import { useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations, useCreateSession, useAnalyzeSession } from '@/hooks/use-api-queries';
+import { useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations, useCreateSession, useUpdateSession, useSession, useAnalyzeSession } from '@/hooks/use-api-queries';
 import type { SessionExerciseLog, SessionSetLog, SessionMetrics } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
 const WorkoutStart = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const resumeId = searchParams.get('resume') || undefined;
   const navigate = useNavigate();
   const { data: workout, isLoading } = useWorkout(id);
+  const { data: existingSession } = useSession(resumeId);
   const { data: exercises = [] } = useExercises();
   const { data: profiles = [] } = usePerformanceProfiles();
   const { data: allRecs = [] } = useAdaptiveRecommendations();
   const createSession = useCreateSession();
+  const updateSession = useUpdateSession();
   const analyzeSession = useAnalyzeSession();
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
   const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, SessionSetLog[]>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isPausing, setIsPausing] = useState(false);
   const startedAtRef = useRef<string | null>(null);
 
   // Finish dialog state
@@ -81,6 +87,75 @@ const WorkoutStart = () => {
     setExpandedBlock(workout.blocks[0]?.id || null);
   };
 
+  // Hydrate from in-progress session when resuming
+  useEffect(() => {
+    if (!existingSession || !workout || sessionActive) return;
+    const logs: Record<string, SessionSetLog[]> = {};
+    for (const block of workout.blocks) {
+      for (const item of block.items) {
+        const key = `${block.id}_${item.id}`;
+        const stored = existingSession.exercises.find(e => e.exerciseId === item.exerciseId);
+        logs[key] = stored?.actualSets?.length
+          ? stored.actualSets
+          : Array.from({ length: item.sets }, (_, i) => ({
+              setNumber: i + 1, weight: 0, reps: item.repsMin, completed: false,
+            }));
+      }
+    }
+    setExerciseLogs(logs);
+    setSessionId(existingSession.id);
+    setSessionActive(true);
+    startedAtRef.current = existingSession.startedAt;
+    setExpandedBlock(workout.blocks[0]?.id || null);
+  }, [existingSession, workout, sessionActive]);
+
+  const buildExerciseLogs = (): SessionExerciseLog[] => {
+    if (!workout) return [];
+    const out: SessionExerciseLog[] = [];
+    for (const block of workout.blocks) {
+      for (const item of block.items) {
+        const key = `${block.id}_${item.id}`;
+        out.push({
+          exerciseId: item.exerciseId,
+          exerciseName: getExerciseName(item.exerciseId),
+          plannedSets: item.sets,
+          plannedRepsMin: item.repsMin,
+          plannedRepsMax: item.repsMax,
+          actualSets: exerciseLogs[key] || [],
+        });
+      }
+    }
+    return out;
+  };
+
+  const pauseSession = async () => {
+    if (!workout) return;
+    setIsPausing(true);
+    try {
+      if (sessionId) {
+        await updateSession.mutateAsync({
+          id: sessionId,
+          input: { status: 'in_progress', exercises: buildExerciseLogs() },
+        });
+      } else {
+        const created = await createSession.mutateAsync({
+          workoutId: workout.id,
+          workoutName: workout.name,
+          status: 'in_progress',
+          startedAt: startedAtRef.current || new Date().toISOString(),
+          exercises: buildExerciseLogs(),
+        });
+        setSessionId(created.id);
+      }
+      toast({ title: 'Session saved', description: 'Resume any time from Training → Sessions.' });
+      navigate('/training?tab=sessions');
+    } catch {
+      toast({ title: 'Could not save session', variant: 'destructive' });
+    } finally {
+      setIsPausing(false);
+    }
+  };
+
   const updateSet = (key: string, setIndex: number, field: keyof SessionSetLog, value: number | boolean) => {
     setExerciseLogs(prev => {
       const updated = { ...prev };
@@ -98,44 +173,44 @@ const WorkoutStart = () => {
     if (!workout) return;
     setIsSaving(true);
     try {
-      const exercises: SessionExerciseLog[] = [];
-      for (const block of workout.blocks) {
-        for (const item of block.items) {
-          const key = `${block.id}_${item.id}`;
-          exercises.push({
-            exerciseId: item.exerciseId,
-            exerciseName: getExerciseName(item.exerciseId),
-            plannedSets: item.sets,
-            plannedRepsMin: item.repsMin,
-            plannedRepsMax: item.repsMax,
-            actualSets: exerciseLogs[key] || [],
-          });
-        }
-      }
+      const exercises = buildExerciseLogs();
       const metrics: SessionMetrics = {
         activeCalories: activeCalories ? Number(activeCalories) : undefined,
         totalCalories: totalCalories ? Number(totalCalories) : undefined,
         avgHeartRate: avgHeartRate ? Number(avgHeartRate) : undefined,
         rpe: rpe ? Number(rpe) : undefined,
       };
-      const session = await createSession.mutateAsync({
-        workoutId: workout.id,
-        workoutName: workout.name,
-        status: 'completed',
-        startedAt: startedAtRef.current || new Date().toISOString(),
-        completedAt: new Date().toISOString(),
-        exercises,
-        metrics,
-        notes: notes || undefined,
-      });
-
-      await analyzeSession.mutateAsync(session.id);
-      toast({
-        title: 'Workout Complete!',
-        description: 'Insights generated. Review your session breakdown.',
-      });
+      let savedId: string;
+      if (sessionId) {
+        const updated = await updateSession.mutateAsync({
+          id: sessionId,
+          input: {
+            status: 'completed',
+            startedAt: startedAtRef.current || new Date().toISOString(),
+            completedAt: new Date().toISOString(),
+            exercises,
+            metrics,
+            notes: notes || undefined,
+          },
+        });
+        savedId = updated.id;
+      } else {
+        const created = await createSession.mutateAsync({
+          workoutId: workout.id,
+          workoutName: workout.name,
+          status: 'completed',
+          startedAt: startedAtRef.current || new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          exercises,
+          metrics,
+          notes: notes || undefined,
+        });
+        savedId = created.id;
+      }
+      await analyzeSession.mutateAsync(savedId);
+      toast({ title: 'Workout Complete!', description: 'Insights generated. Review your session breakdown.' });
       setFinishOpen(false);
-      navigate(`/sessions/${session.id}`);
+      navigate(`/sessions/${savedId}`);
     } catch {
       toast({ title: 'Error', description: 'Failed to save session', variant: 'destructive' });
     } finally {
@@ -165,9 +240,14 @@ const WorkoutStart = () => {
               <Play className="mr-2 h-5 w-5" />Begin Session
             </Button>
           ) : (
-            <Button size="lg" onClick={() => setFinishOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Save className="mr-2 h-5 w-5" />Complete Workout
-            </Button>
+            <div className="flex gap-2">
+              <Button size="lg" variant="outline" onClick={pauseSession} disabled={isPausing}>
+                <PauseCircle className="mr-2 h-5 w-5" />{isPausing ? 'Saving…' : 'Save & Exit'}
+              </Button>
+              <Button size="lg" onClick={() => setFinishOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                <Save className="mr-2 h-5 w-5" />Complete Workout
+              </Button>
+            </div>
           )}
         </div>
 
