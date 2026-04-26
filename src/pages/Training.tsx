@@ -62,9 +62,9 @@ const Training: React.FC = () => {
             <TabsTrigger value="programs"><Layers className="mr-1.5 h-4 w-4" />Programs</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="library" className="mt-6"><LibraryTab /></TabsContent>
-          <TabsContent value="workouts" className="mt-6"><WorkoutsTab /></TabsContent>
-          <TabsContent value="programs" className="mt-6"><ProgramsTab /></TabsContent>
+          <TabsContent value="library" className="mt-4"><LibraryTab /></TabsContent>
+          <TabsContent value="workouts" className="mt-4"><WorkoutsTab /></TabsContent>
+          <TabsContent value="programs" className="mt-4"><ProgramsTab /></TabsContent>
         </Tabs>
       </div>
     </Layout>
