@@ -14,16 +14,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard' },
-    { path: '/exercises', label: 'Exercises' },
-    { path: '/workouts', label: 'Workouts' },
-    { path: '/programs', label: 'Programs' },
+    { path: '/training', label: 'Training' },
     { path: '/schedule', label: 'Schedule' },
-    { path: '/sessions', label: 'Sessions' },
-    { path: '/snapshots', label: 'Snapshots' },
+    { path: '/health', label: 'Health Data' },
     ...(hasRole('admin') ? [{ path: '/admin', label: 'Admin' }] : []),
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
     <div className="min-h-screen bg-muted/30">
