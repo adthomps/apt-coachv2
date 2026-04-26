@@ -1,69 +1,102 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
+import { Activity, ChevronDown, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import PageHeader from '@/components/common/PageHeader';
 import SectionCard from '@/components/common/SectionCard';
 import EmptyState from '@/components/common/EmptyState';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
-import { Card, CardContent } from '@/components/ui/card';
+import HealthCommandSummary from '@/components/dashboard/HealthCommandSummary';
+import HealthDirectionGrid from '@/components/dashboard/HealthDirectionGrid';
+import TrainingSection from '@/components/dashboard/TrainingSection';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
-  Activity, ArrowRight, Calendar, Dumbbell, Percent, Scale,
-  TrendingDown, TrendingUp, Upload, Minus,
-} from 'lucide-react';
-import { useSnapshots, useBloodPanels, useSchedule } from '@/hooks/use-api-queries';
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  useSnapshots, useBloodPanels, useSchedule, useSessions,
+} from '@/hooks/use-api-queries';
 import { snapshotApi } from '@/lib/api';
 import { getBodyScanInsights, getBloodPanelInsights, type Insight } from '@/lib/ai/insights';
-import type { ProgressCompare } from '@/lib/api/types';
+import type { ProgressCompare, Snapshot } from '@/lib/api/types';
 
-const Dashboard = () => {
+const isWithings = (s: Snapshot) => (s.provider || '').toLowerCase() === 'withings';
+
+/** Consecutive-day completed-session streak, walking back from today (or yesterday). */
+function computeStreak(completedDates: string[]): number {
+  if (completedDates.length === 0) return 0;
+  const set = new Set(completedDates.map((d) => d.slice(0, 10)));
+  let streak = 0;
+  const cursor = new Date();
+  if (!set.has(cursor.toISOString().slice(0, 10))) cursor.setDate(cursor.getDate() - 1);
+  while (set.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { data: snapshots = [], isLoading: snapsLoading } = useSnapshots();
   const { data: bloodPanels = [] } = useBloodPanels();
   const { data: scheduleEntries = [] } = useSchedule();
+  const { data: sessions = [] } = useSessions();
+
+  const dexaSnapshots = React.useMemo(
+    () => snapshots.filter((s) => !isWithings(s)).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
+    [snapshots],
+  );
+  const withingsSnapshots = React.useMemo(
+    () => snapshots.filter(isWithings).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
+    [snapshots],
+  );
+
+  const latestDexa = dexaSnapshots[0] ?? null;
+  const latestWithings = withingsSnapshots[0] ?? null;
+  const latestPanel = bloodPanels[0] ?? null;
 
   const [compare, setCompare] = React.useState<ProgressCompare | null>(null);
-  const latestSnapshot = snapshots[0] || null;
-  const latestPanel = bloodPanels[0] || null;
-
   React.useEffect(() => {
-    if (snapshots.length > 1) {
-      snapshotApi
-        .compare(snapshots[0].id, 'last')
-        .then(setCompare)
-        .catch(() => setCompare(null));
+    if (latestDexa && dexaSnapshots.length > 1) {
+      snapshotApi.compare(latestDexa.id, 'last').then(setCompare).catch(() => setCompare(null));
     } else {
       setCompare(null);
     }
-  }, [snapshots]);
+  }, [latestDexa, dexaSnapshots.length]);
 
-  const insights: Insight[] = React.useMemo(() => {
-    const out: Insight[] = [];
-    if (latestSnapshot) out.push(...getBodyScanInsights(latestSnapshot, compare ?? undefined));
-    if (latestPanel) out.push(...getBloodPanelInsights(latestPanel));
-    return out.slice(0, 6);
-  }, [latestSnapshot, latestPanel, compare]);
-
-  const heroInsight = insights[0];
-  const restInsights = insights.slice(1);
-
-  // Schedule: next + recent
-  const today = new Date().toISOString().slice(0, 10);
-  const upcoming = React.useMemo(
-    () =>
-      scheduleEntries
-        .filter((e) => e.status === 'scheduled' && e.date >= today)
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [scheduleEntries, today],
+  const bodyInsights: Insight[] = React.useMemo(
+    () => (latestDexa ? getBodyScanInsights(latestDexa, compare ?? undefined) : []),
+    [latestDexa, compare],
   );
-  const nextSession = upcoming[0] || null;
+  const panelInsights: Insight[] = React.useMemo(
+    () => (latestPanel ? getBloodPanelInsights(latestPanel) : []),
+    [latestPanel],
+  );
 
-  const completedCount = scheduleEntries.filter((e) => e.status === 'completed').length;
+  const headline: Insight | null = bodyInsights[0] ?? panelInsights[0] ?? null;
+  const supportingInsights: Insight[] = React.useMemo(() => {
+    const all = [...bodyInsights, ...panelInsights];
+    return headline ? all.filter((i) => i.id !== headline.id).slice(0, 6) : all.slice(0, 6);
+  }, [bodyInsights, panelInsights, headline]);
+
+  // Schedule + adherence
+  const today = new Date().toISOString().slice(0, 10);
+  const completedScheduleCount = scheduleEntries.filter((e) => e.status === 'completed').length;
   const totalScheduled = scheduleEntries.length;
-  const adherenceRate = totalScheduled > 0 ? Math.round((completedCount / totalScheduled) * 100) : 0;
+  const adherenceRate = totalScheduled > 0 ? Math.round((completedScheduleCount / totalScheduled) * 100) : 0;
+  const upcoming = scheduleEntries
+    .filter((e) => e.status === 'scheduled' && e.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const nextSessionLabel = upcoming[0]
+    ? new Date(upcoming[0].date).toLocaleDateString(undefined, { weekday: 'short' })
+    : null;
+
+  const completedDates = sessions
+    .filter((s) => s.status === 'completed')
+    .map((s) => s.completedAt ?? s.startedAt);
+  const streak = computeStreak(completedDates);
 
   if (snapsLoading) {
     return (
@@ -75,8 +108,8 @@ const Dashboard = () => {
     );
   }
 
-  // First-run state — guide to import
-  if (!latestSnapshot) {
+  // First-run: no data anywhere
+  if (!latestDexa && !latestPanel && !latestWithings) {
     return (
       <Layout>
         <div className="space-y-8">
@@ -88,11 +121,11 @@ const Dashboard = () => {
             <EmptyState
               icon={<Activity className="h-12 w-12" />}
               title="No health data yet"
-              description="Import your first body scan to unlock evidence-based recommendations, training adjustments, and food guidance."
+              description="Import your first body scan, blood panel, or smart-scale reading to unlock evidence-based coaching."
               action={
-                <Link to="/admin">
+                <Link to="/admin?tab=imports">
                   <Button size="lg">
-                    <Upload className="mr-2 h-4 w-4" />Import Health Data
+                    <Upload className="mr-2 h-4 w-4" /> Import Health Data
                   </Button>
                 </Link>
               }
@@ -103,20 +136,6 @@ const Dashboard = () => {
     );
   }
 
-  const bc = latestSnapshot.bodyComposition;
-
-  const formatChange = (v: number, suffix = '') =>
-    `${v > 0 ? '+' : ''}${v.toFixed(1)}${suffix}`;
-  const changeTone = (v: number, invert = false) => {
-    if (Math.abs(v) < 0.5) return 'text-muted-foreground';
-    const positive = invert ? v < 0 : v > 0;
-    return positive ? 'text-success' : 'text-destructive';
-  };
-  const TrendIcon = ({ v }: { v: number }) =>
-    v > 0.5 ? <TrendingUp className="h-3.5 w-3.5" /> :
-    v < -0.5 ? <TrendingDown className="h-3.5 w-3.5" /> :
-    <Minus className="h-3.5 w-3.5" />;
-
   return (
     <Layout>
       <div className="space-y-8">
@@ -125,189 +144,67 @@ const Dashboard = () => {
           description={`Hey ${user?.name?.split(' ')[0] || 'there'} — here's what your data says today.`}
         />
 
-        {/* Band 1 — Hero Insight */}
-        {heroInsight ? (
-          <SectionCard
-            title="Today's Headline Insight"
-            description="The single most relevant signal from your latest data."
-          >
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-5 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <Badge variant="outline" className="capitalize mb-2">
-                    {heroInsight.category}
-                  </Badge>
-                  <h3 className="text-lg font-semibold text-foreground">{heroInsight.title}</h3>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">{heroInsight.rationale}</p>
-              <div className="text-xs text-muted-foreground pt-3 border-t border-border/60">
-                <span className="font-medium text-foreground">Evidence:</span>{' '}
-                {heroInsight.evidence.label}{' '}
-                <span className="font-mono text-foreground">{heroInsight.evidence.value}</span>
-                {heroInsight.evidence.reference && <> · ref {heroInsight.evidence.reference}</>}
-                {heroInsight.evidence.date && (
-                  <> · {format(new Date(heroInsight.evidence.date), 'MMM d, yyyy')}</>
-                )}
-              </div>
-            </div>
-          </SectionCard>
-        ) : null}
+        {/* 1. Health Command Summary (with embedded headline) */}
+        <HealthCommandSummary
+          headline={headline}
+          latestSnapshot={latestDexa}
+          latestPanel={latestPanel}
+          latestWithings={latestWithings}
+          compare={compare}
+          adherenceRate={adherenceRate}
+          completedCount={completedScheduleCount}
+          totalScheduled={totalScheduled}
+          nextSessionLabel={nextSessionLabel}
+          streak={streak}
+        />
 
-        {/* Band 2 — Body KPIs */}
-        <SectionCard
-          title="Body Composition"
-          description={`Latest scan ${format(new Date(latestSnapshot.scanDate), 'MMM d, yyyy')}${
-            latestSnapshot.provider ? ` · ${latestSnapshot.provider}` : ''
-          }`}
-          actions={
-            <Link to="/health">
-              <Button variant="ghost" size="sm" className="text-xs">
-                View health data <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </Link>
-          }
-        >
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <KpiCard
-              icon={<Scale className="h-4 w-4 text-muted-foreground" />}
-              label="Weight"
-              value={`${bc.totalMass.toFixed(1)} lbs`}
-              change={
-                compare && (
-                  <span className={`flex items-center gap-1 ${changeTone(compare.changes.totalMass.value)}`}>
-                    <TrendIcon v={compare.changes.totalMass.value} />
-                    {formatChange(compare.changes.totalMass.value, ' lbs')}
-                  </span>
-                )
-              }
-            />
-            <KpiCard
-              icon={<Percent className="h-4 w-4 text-muted-foreground" />}
-              label="Body Fat"
-              value={`${bc.bodyFatPercentage.toFixed(1)}%`}
-              change={
-                compare && (
-                  <span className={`flex items-center gap-1 ${changeTone(compare.changes.bodyFatPercentage.value, true)}`}>
-                    <TrendIcon v={-compare.changes.bodyFatPercentage.value} />
-                    {formatChange(compare.changes.bodyFatPercentage.value, '%')}
-                  </span>
-                )
-              }
-            />
-            <KpiCard
-              icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-              label="Lean Mass"
-              value={`${bc.leanMass.toFixed(1)} lbs`}
-              change={
-                compare && (
-                  <span className={`flex items-center gap-1 ${changeTone(compare.changes.leanMass.value)}`}>
-                    <TrendIcon v={compare.changes.leanMass.value} />
-                    {formatChange(compare.changes.leanMass.value, ' lbs')}
-                  </span>
-                )
-              }
-            />
-            <KpiCard
-              icon={<TrendingDown className="h-4 w-4 text-muted-foreground" />}
-              label="Fat Mass"
-              value={`${bc.fatMass.toFixed(1)} lbs`}
-              change={
-                compare && (
-                  <span className={`flex items-center gap-1 ${changeTone(compare.changes.fatMass.value, true)}`}>
-                    <TrendIcon v={-compare.changes.fatMass.value} />
-                    {formatChange(compare.changes.fatMass.value, ' lbs')}
-                  </span>
-                )
-              }
-            />
-            <KpiCard
-              icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
-              label="Adherence"
-              value={`${adherenceRate}%`}
-              change={
-                <span className="text-muted-foreground">
-                  {completedCount}/{totalScheduled} sessions
-                </span>
-              }
-            />
-          </div>
-        </SectionCard>
+        {/* 2. Health Direction (Dexa · Rythm · Withings) */}
+        <HealthDirectionGrid
+          latestDexa={latestDexa}
+          latestWithings={latestWithings}
+          latestPanel={latestPanel}
+          bodyInsights={bodyInsights}
+          panelInsights={panelInsights}
+        />
 
-        {/* Band 3 — Next Session + Supporting Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <SectionCard
-              title="Next Session"
-              description={nextSession ? format(parseISO(nextSession.date), 'EEEE, MMM d') : 'No upcoming work'}
-            >
-              {nextSession ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Dumbbell className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-foreground">
-                      {nextSession.workoutName || 'Workout'}
-                    </span>
+        {/* 3. Training */}
+        <TrainingSection
+          scheduleEntries={scheduleEntries}
+          sessions={sessions}
+          adherenceRate={adherenceRate}
+          completedCount={completedScheduleCount}
+          totalScheduled={totalScheduled}
+        />
+
+        {/* 4. Supporting Insights — collapsed by default to keep the page calm */}
+        {supportingInsights.length > 0 && (
+          <Collapsible>
+            <SectionCard variant="subtle">
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between text-left group">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">More insights</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {supportingInsights.length} additional signal{supportingInsights.length === 1 ? '' : 's'} from your scans and panels.
+                    </p>
                   </div>
-                  {nextSession.notes && (
-                    <p className="text-xs text-muted-foreground italic">"{nextSession.notes}"</p>
-                  )}
-                  <div className="flex gap-2">
-                    <Link to={`/workouts/${nextSession.workoutId}/start`} className="flex-1">
-                      <Button size="sm" className="w-full">Start</Button>
-                    </Link>
-                    <Link to="/schedule">
-                      <Button size="sm" variant="outline">View week</Button>
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <EmptyState
-                  icon={<Calendar className="h-8 w-8" />}
-                  title="No sessions scheduled"
-                  description="Plan a workout to keep adherence on track."
-                  action={
-                    <Link to="/schedule">
-                      <Button size="sm">Open schedule</Button>
-                    </Link>
-                  }
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <AIInsightsPanel
+                  insights={supportingInsights}
+                  title="Supporting Insights"
+                  description="Every recommendation cites the scan or marker it came from."
+                  emptyTitle="No additional signals"
                 />
-              )}
+              </CollapsibleContent>
             </SectionCard>
-          </div>
-
-          <div className="lg:col-span-2">
-            <AIInsightsPanel
-              insights={restInsights}
-              title="Supporting Insights"
-              description="Additional signals from your scans and blood panels — every recommendation cites its source."
-              emptyTitle="Add more data for richer insights"
-            />
-          </div>
-        </div>
+          </Collapsible>
+        )}
       </div>
     </Layout>
   );
 };
-
-interface KpiCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  change?: React.ReactNode;
-}
-
-const KpiCard: React.FC<KpiCardProps> = ({ icon, label, value, change }) => (
-  <Card>
-    <CardContent className="pt-5 pb-4">
-      <div className="flex items-center gap-2 mb-1">
-        {icon}
-        <span className="text-sm text-muted-foreground">{label}</span>
-      </div>
-      <div className="text-2xl font-bold text-foreground">{value}</div>
-      {change && <div className="text-xs mt-1">{change}</div>}
-    </CardContent>
-  </Card>
-);
 
 export default Dashboard;
