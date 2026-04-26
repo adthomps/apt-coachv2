@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Activity, Clock, Flame, Heart, Pencil, Play, Trash2, Eye } from 'lucide-react';
+import { Activity, Clock, Flame, Heart, Pencil, Play, Plus, Trash2, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import EntityCard from '@/components/common/EntityCard';
 import EmptyState from '@/components/common/EmptyState';
 import ListToolbar from '@/components/common/ListToolbar';
@@ -14,8 +17,10 @@ import FormDialog from '@/components/common/FormDialog';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import {
   useSessions,
+  useCreateSession,
   useUpdateSession,
   useDeleteSession,
+  useWorkouts,
   queryKeys,
 } from '@/hooks/use-api-queries';
 import { useQueryClient } from '@tanstack/react-query';
