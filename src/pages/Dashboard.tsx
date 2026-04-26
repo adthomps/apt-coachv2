@@ -160,7 +160,7 @@ const Dashboard = () => {
           description={`Latest scan ${format(new Date(latestSnapshot.scanDate), 'MMM d, yyyy')}${
             latestSnapshot.provider ? ` · ${latestSnapshot.provider}` : ''
           }`}
-          action={
+          actions={
             <Link to="/health">
               <Button variant="ghost" size="sm" className="text-xs">
                 View health data <ArrowRight className="ml-1 h-3 w-3" />
