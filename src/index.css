@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* APT Design System Tokens
+   Dark-first. All colors HSL. Hue family: 220 (blue) + 165 (teal accent).
+   
+   Typography Scale:
+   - Page title:     text-3xl md:text-4xl font-bold tracking-tight
+   - Section heading: text-2xl md:text-3xl font-semibold tracking-tight  
+   - Card title:     text-xl md:text-2xl font-semibold
+   - Body:           text-base leading-relaxed
+   - Caption:        text-xs text-muted-foreground
+*/
+
+@layer base {
+  :root {
+    /* APT Light mode (secondary) */
+    --background: 220 20% 97%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 220 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 220 70% 42%;
+
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 20% 10%;
+
+    --muted: 220 12% 94%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 165 55% 38%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 85%;
+    --input: 220 15% 85%;
+    --ring: 220 70% 50%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 220 15% 95%;
+    --sidebar-foreground: 220 15% 25%;
+    --sidebar-primary: 220 70% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 12% 90%;
+    --sidebar-accent-foreground: 220 20% 10%;
+    --sidebar-border: 220 15% 85%;
+    --sidebar-ring: 220 70% 50%;
+  }
+
+  .dark {
+    /* APT Dark mode (primary experience) */
+    --background: 220 20% 8%;
+    --foreground: 220 10% 95%;
+
+    --card: 220 18% 11%;
+    --card-foreground: 220 10% 95%;
+
+    --popover: 220 18% 11%;
+    --popover-foreground: 220 10% 95%;
+
+    --primary: 220 70% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 220 70% 48%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 220 10% 90%;
+
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 165 55% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 90% 50%;
+    --warning-foreground: 0 0% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 220 70% 55%;
+
+    --sidebar-background: 220 20% 6%;
+    --sidebar-foreground: 220 10% 85%;
+    --sidebar-primary: 220 70% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 14%;
+    --sidebar-accent-foreground: 220 10% 90%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 220 70% 55%;
+  }
+}
+
+/* APT Animation System */
+@keyframes apt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes apt-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes apt-glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px 0 hsl(220 70% 55% / 0.15); }
+  50% { box-shadow: 0 0 16px 2px hsl(220 70% 55% / 0.25); }
+}
+
+@layer utilities {
+  .apt-fade-in {
+    animation: apt-fade-in 400ms ease-out both;
+  }
+
+  .apt-slide-up {
+    animation: apt-slide-up 500ms ease-out both;
+  }
+
+  .apt-hover-lift {
+    transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+  }
+  .apt-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px -4px hsl(220 20% 8% / 0.25);
+  }
+
+  .apt-glow-subtle {
+    animation: apt-glow-pulse 3s ease-in-out infinite;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
