@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 import {
   ArrowLeft, Play, CheckCircle, Dumbbell, TrendingUp,
   Zap, Clock, ChevronDown, ChevronUp, Save
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations, useCreateSession, useAnalyzeSession } from '@/hooks/use-api-queries';
-import type { SessionExerciseLog, SessionSetLog } from '@/lib/api/types';
+import type { SessionExerciseLog, SessionSetLog, SessionMetrics } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
 const WorkoutStart = () => {
@@ -27,6 +32,15 @@ const WorkoutStart = () => {
   const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, SessionSetLog[]>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const startedAtRef = useRef<string | null>(null);
+
+  // Finish dialog state
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [activeCalories, setActiveCalories] = useState('');
+  const [totalCalories, setTotalCalories] = useState('');
+  const [avgHeartRate, setAvgHeartRate] = useState('');
+  const [rpe, setRpe] = useState('');
+  const [notes, setNotes] = useState('');
 
   // Filter recommendations for exercises in this workout
   const exerciseIds = new Set(workout?.blocks.flatMap(b => b.items.map(i => i.exerciseId)) || []);
@@ -63,6 +77,7 @@ const WorkoutStart = () => {
     }
     setExerciseLogs(logs);
     setSessionActive(true);
+    startedAtRef.current = new Date().toISOString();
     setExpandedBlock(workout.blocks[0]?.id || null);
   };
 
@@ -87,7 +102,6 @@ const WorkoutStart = () => {
       for (const block of workout.blocks) {
         for (const item of block.items) {
           const key = `${block.id}_${item.id}`;
-          const profile = getProfileForExercise(item.exerciseId);
           exercises.push({
             exerciseId: item.exerciseId,
             exerciseName: getExerciseName(item.exerciseId),
@@ -98,21 +112,30 @@ const WorkoutStart = () => {
           });
         }
       }
+      const metrics: SessionMetrics = {
+        activeCalories: activeCalories ? Number(activeCalories) : undefined,
+        totalCalories: totalCalories ? Number(totalCalories) : undefined,
+        avgHeartRate: avgHeartRate ? Number(avgHeartRate) : undefined,
+        rpe: rpe ? Number(rpe) : undefined,
+      };
       const session = await createSession.mutateAsync({
         workoutId: workout.id,
         workoutName: workout.name,
         status: 'completed',
-        startedAt: new Date().toISOString(),
+        startedAt: startedAtRef.current || new Date().toISOString(),
         completedAt: new Date().toISOString(),
         exercises,
+        metrics,
+        notes: notes || undefined,
       });
 
-      const newRecs = await analyzeSession.mutateAsync(session.id);
+      await analyzeSession.mutateAsync(session.id);
       toast({
         title: 'Workout Complete!',
-        description: `${newRecs.length} new insight${newRecs.length !== 1 ? 's' : ''} generated.`,
+        description: 'Insights generated. Review your session breakdown.',
       });
-      navigate('/workouts');
+      setFinishOpen(false);
+      navigate(`/sessions/${session.id}`);
     } catch {
       toast({ title: 'Error', description: 'Failed to save session', variant: 'destructive' });
     } finally {
@@ -142,8 +165,8 @@ const WorkoutStart = () => {
               <Play className="mr-2 h-5 w-5" />Begin Session
             </Button>
           ) : (
-            <Button size="lg" onClick={completeSession} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Save className="mr-2 h-5 w-5" />{isSaving ? 'Saving...' : 'Complete Workout'}
+            <Button size="lg" onClick={() => setFinishOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Save className="mr-2 h-5 w-5" />Complete Workout
             </Button>
           )}
         </div>
@@ -281,6 +304,47 @@ const WorkoutStart = () => {
           </Card>
         ))}
       </div>
+
+      <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Complete Workout</DialogTitle>
+            <DialogDescription>
+              Capture wearable data and effort. All fields are optional — you can edit later from the session detail page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="ac">Active Calories</Label>
+                <Input id="ac" type="number" min="0" value={activeCalories} onChange={(e) => setActiveCalories(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tc">Total Calories</Label>
+                <Input id="tc" type="number" min="0" value={totalCalories} onChange={(e) => setTotalCalories(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="hr">Avg Heart Rate (BPM)</Label>
+                <Input id="hr" type="number" min="0" value={avgHeartRate} onChange={(e) => setAvgHeartRate(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="rpe">Effort (RPE 1–10)</Label>
+                <Input id="rpe" type="number" min="1" max="10" step="0.5" value={rpe} onChange={(e) => setRpe(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea id="notes" rows={3} placeholder="How did it feel?" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFinishOpen(false)}>Cancel</Button>
+            <Button onClick={completeSession} disabled={isSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Save className="mr-2 h-4 w-4" />{isSaving ? 'Saving…' : 'Save & View Insights'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

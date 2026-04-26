@@ -243,7 +243,33 @@ export function useCreateSession() {
   });
 }
 
-// ============ Session List Hook ============
+export function useUpdateSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof sessionApi.update>[1] }) =>
+      sessionApi.update(id, input),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.sessions });
+      qc.invalidateQueries({ queryKey: ['sessions', vars.id] });
+    },
+  });
+}
+
+export function useDeleteSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => sessionApi.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.sessions }); },
+  });
+}
+
+export function useSession(id: string | undefined) {
+  return useQuery({
+    queryKey: ['sessions', id],
+    queryFn: () => sessionApi.get(id!),
+    enabled: !!id,
+  });
+}
 
 export function useSessions() {
   return useQuery({

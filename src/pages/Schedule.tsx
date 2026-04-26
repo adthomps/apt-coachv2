@@ -302,6 +302,7 @@ const Schedule = () => {
                   <div className="space-y-2">
                     {filteredHistory.slice(0, 8).map(entry => {
                       const config = STATUS_CONFIG[entry.status];
+                      const goesToSession = entry.status === 'completed' && entry.sessionId;
                       return (
                         <div
                           key={entry.id}
@@ -311,11 +312,18 @@ const Schedule = () => {
                             historyFilter === 'completed' && 'border-accent/20 bg-accent/5 hover:bg-accent/10',
                             historyFilter === 'skipped' && 'border-destructive/20 bg-destructive/5 hover:bg-destructive/10',
                           )}
-                          onClick={() => { setSelectedDay(parseISO(entry.date)); setSheetOpen(true); }}
+                          onClick={() => {
+                            if (goesToSession) {
+                              window.location.href = `/sessions/${entry.sessionId}`;
+                            } else {
+                              setSelectedDay(parseISO(entry.date));
+                              setSheetOpen(true);
+                            }
+                          }}
                         >
                           <div className="text-xs text-muted-foreground">{format(parseISO(entry.date), 'EEE, MMM d')}</div>
                           <div className="text-sm font-medium text-foreground truncate">{entry.workoutName}</div>
-                          <div className="text-[10px] text-muted-foreground mt-0.5 capitalize">{config.label}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5 capitalize">{config.label}{goesToSession && ' · view details →'}</div>
                         </div>
                       );
                     })}

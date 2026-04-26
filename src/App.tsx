@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Training from "./pages/Training";
 import WorkoutStart from "./pages/WorkoutStart";
+import SessionDetail from "./pages/SessionDetail";
 import Schedule from "./pages/Schedule";
 import Health from "./pages/Health";
 import Admin from "./pages/Admin";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/training" element={<ProtectedRoute><Training /></ProtectedRoute>} />
               <Route path="/workouts/:id/start" element={<ProtectedRoute><WorkoutStart /></ProtectedRoute>} />
+              <Route path="/sessions/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
               <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
               <Route path="/health" element={<ProtectedRoute><Health /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
