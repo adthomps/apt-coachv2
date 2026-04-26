@@ -42,6 +42,8 @@ const Schedule = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
+  type HistoryFilter = 'scheduled' | 'completed' | 'skipped';
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('scheduled');
 
   // New entry form state
   const [newWorkoutId, setNewWorkoutId] = useState('');
@@ -84,6 +86,13 @@ const Schedule = () => {
   const completedDays = entries.filter(e => e.status === 'completed').map(e => parseISO(e.date));
   const skippedDays = entries.filter(e => e.status === 'skipped').map(e => parseISO(e.date));
   const scheduledDays = entries.filter(e => e.status === 'scheduled').map(e => parseISO(e.date));
+
+  const filteredHistory = useMemo(() => {
+    const filtered = entries.filter(e => e.status === historyFilter);
+    return historyFilter === 'scheduled'
+      ? filtered.sort((a, b) => a.date.localeCompare(b.date))
+      : filtered.sort((a, b) => b.date.localeCompare(a.date));
+  }, [entries, historyFilter]);
 
   const handleDayClick = (day: Date) => {
     setSelectedDay(day);
@@ -267,28 +276,49 @@ const Schedule = () => {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Upcoming Workouts</CardTitle>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-sm">Sessions</CardTitle>
+                  <Select value={historyFilter} onValueChange={(v) => setHistoryFilter(v as HistoryFilter)}>
+                    <SelectTrigger className="h-7 w-32 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="scheduled">Upcoming</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="skipped">Skipped</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
-                {entries.filter(e => e.status === 'scheduled').length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No upcoming workouts scheduled.</p>
+                {filteredHistory.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {historyFilter === 'scheduled' && 'No upcoming workouts scheduled.'}
+                    {historyFilter === 'completed' && 'No completed sessions yet.'}
+                    {historyFilter === 'skipped' && 'No skipped sessions.'}
+                  </p>
                 ) : (
                   <div className="space-y-2">
-                    {entries
-                      .filter(e => e.status === 'scheduled')
-                      .sort((a, b) => a.date.localeCompare(b.date))
-                      .slice(0, 5)
-                      .map(entry => (
+                    {filteredHistory.slice(0, 8).map(entry => {
+                      const config = STATUS_CONFIG[entry.status];
+                      return (
                         <div
                           key={entry.id}
-                          className="p-2.5 rounded-lg border border-primary/20 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
+                          className={cn(
+                            'p-2.5 rounded-lg border cursor-pointer transition-colors',
+                            historyFilter === 'scheduled' && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
+                            historyFilter === 'completed' && 'border-accent/20 bg-accent/5 hover:bg-accent/10',
+                            historyFilter === 'skipped' && 'border-destructive/20 bg-destructive/5 hover:bg-destructive/10',
+                          )}
                           onClick={() => { setSelectedDay(parseISO(entry.date)); setSheetOpen(true); }}
                         >
                           <div className="text-xs text-muted-foreground">{format(parseISO(entry.date), 'EEE, MMM d')}</div>
-                          <div className="text-sm font-medium text-foreground">{entry.workoutName}</div>
+                          <div className="text-sm font-medium text-foreground truncate">{entry.workoutName}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5 capitalize">{config.label}</div>
                         </div>
-                      ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
