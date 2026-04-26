@@ -27,6 +27,7 @@ import {
   useExercises, useCreateExercise, useUpdateExercise, useDeleteExercise,
   useWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout,
   usePrograms, useCreateProgram, useUpdateProgram, useDeleteProgram,
+  useSessions,
 } from '@/hooks/use-api-queries';
 import type {
   Exercise, CreateExerciseInput, MovementPattern,
@@ -204,9 +205,21 @@ const LibraryTab: React.FC = () => {
 
 const WorkoutsTab: React.FC = () => {
   const { data: workouts = [], isLoading } = useWorkouts();
+  const { data: sessions = [] } = useSessions();
   const createMutation = useCreateWorkout();
   const updateMutation = useUpdateWorkout();
   const deleteMutation = useDeleteWorkout();
+
+  // Map workoutId -> most recent in-progress session (for Resume CTA)
+  const inProgressByWorkout = React.useMemo(() => {
+    const map = new Map<string, typeof sessions[number]>();
+    for (const s of sessions) {
+      if (s.status !== 'in_progress') continue;
+      const existing = map.get(s.workoutId);
+      if (!existing || s.startedAt > existing.startedAt) map.set(s.workoutId, s);
+    }
+    return map;
+  }, [sessions]);
 
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('All');
