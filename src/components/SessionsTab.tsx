@@ -370,6 +370,47 @@ const SessionsTab: React.FC = () => {
         description={`Delete the ${deleteTarget?.workoutName} session? This cannot be undone.`}
         isLoading={deleteSession.isPending}
       />
+
+      <FormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="New Session"
+        description="Pick a workout and start time. The session opens in progress so you can log sets live."
+        size="sm"
+        submitLabel="Start Session"
+        onSubmit={handleCreate}
+        isSubmitting={isCreating}
+        canSubmit={!!newWorkoutId && workouts.length > 0}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="ns-workout">Workout</Label>
+          {workouts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No workouts yet — create one in the Workouts tab first.
+            </p>
+          ) : (
+            <Select value={newWorkoutId} onValueChange={setNewWorkoutId}>
+              <SelectTrigger id="ns-workout">
+                <SelectValue placeholder="Select a workout" />
+              </SelectTrigger>
+              <SelectContent>
+                {workouts.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="ns-start"><Clock className="inline h-3 w-3 mr-1" />Start time</Label>
+          <Input
+            id="ns-start"
+            type="datetime-local"
+            value={newStartedAt}
+            onChange={(e) => setNewStartedAt(e.target.value)}
+          />
+        </div>
+      </FormDialog>
     </div>
   );
 };
