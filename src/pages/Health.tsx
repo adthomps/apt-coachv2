@@ -543,6 +543,8 @@ const Health: React.FC = () => {
         description="Delete this blood panel? This cannot be undone."
         isLoading={deletePanel.isPending}
       />
+
+      <WithingsImportDialog open={withingsImportOpen} onOpenChange={setWithingsImportOpen} />
     </Layout>
   );
 };
