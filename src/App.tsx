@@ -15,6 +15,7 @@ import Schedule from "./pages/Schedule";
 import Health from "./pages/Health";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
+import UserGuide from "./pages/UserGuide";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/health" element={<ProtectedRoute><Health /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute>} />
+              <Route path="/user-guide" element={<ProtectedRoute><UserGuide /></ProtectedRoute>} />
 
               {/* Redirects from old routes */}
               <Route path="/exercises" element={<Navigate to="/training?tab=library" replace />} />

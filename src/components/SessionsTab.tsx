@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Activity, Clock, Flame, Heart, Pencil, Play, Trash2, Eye } from 'lucide-react';
+import { Activity, Clock, Flame, Heart, Pencil, Play, Plus, Trash2, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import EntityCard from '@/components/common/EntityCard';
 import EmptyState from '@/components/common/EmptyState';
 import ListToolbar from '@/components/common/ListToolbar';
@@ -14,8 +17,10 @@ import FormDialog from '@/components/common/FormDialog';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import {
   useSessions,
+  useCreateSession,
   useUpdateSession,
   useDeleteSession,
+  useWorkouts,
   queryKeys,
 } from '@/hooks/use-api-queries';
 import { useQueryClient } from '@tanstack/react-query';
@@ -47,14 +52,23 @@ const STATUS_TONE: Record<WorkoutSession['status'], string> = {
 
 const SessionsTab: React.FC = () => {
   const { data: sessions = [], isLoading } = useSessions();
+  const { data: workouts = [] } = useWorkouts();
   const updateSession = useUpdateSession();
+  const createSession = useCreateSession();
   const deleteSession = useDeleteSession();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('All');
   const [editing, setEditing] = useState<WorkoutSession | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WorkoutSession | null>(null);
+
+  // New-session dialog state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newWorkoutId, setNewWorkoutId] = useState('');
+  const [newStartedAt, setNewStartedAt] = useState(() => fmtDateTimeLocal(new Date().toISOString()));
+  const [isCreating, setIsCreating] = useState(false);
 
   // Edit form state
   const [startedAt, setStartedAt] = useState('');
@@ -127,18 +141,54 @@ const SessionsTab: React.FC = () => {
     }
   };
 
+  const openCreate = () => {
+    setNewWorkoutId(workouts[0]?.id ?? '');
+    setNewStartedAt(fmtDateTimeLocal(new Date().toISOString()));
+    setCreateOpen(true);
+  };
+
+  const handleCreate = async () => {
+    if (!newWorkoutId) return;
+    const wk = workouts.find((w) => w.id === newWorkoutId);
+    if (!wk) return;
+    setIsCreating(true);
+    try {
+      const created = await createSession.mutateAsync({
+        workoutId: wk.id,
+        workoutName: wk.name,
+        status: 'in_progress',
+        startedAt: newStartedAt ? fromLocal(newStartedAt) : new Date().toISOString(),
+        exercises: [],
+      });
+      toast({ title: 'Session started', description: `${wk.name} is now in progress.` });
+      setCreateOpen(false);
+      navigate(`/workouts/${wk.id}/start?resume=${created.id}`);
+    } catch {
+      toast({ title: 'Could not start session', variant: 'destructive' });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <ListToolbar
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search by workout or notes…"
-        filters={STATUS_FILTERS}
-        selectedFilter={status}
-        onFilterChange={setStatus}
-        resultCount={filtered.length}
-        resultLabel="sessions"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div className="flex-1">
+          <ListToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search by workout or notes…"
+            filters={STATUS_FILTERS}
+            selectedFilter={status}
+            onFilterChange={setStatus}
+            resultCount={filtered.length}
+            resultLabel="sessions"
+          />
+        </div>
+        <Button onClick={openCreate} className="shrink-0">
+          <Plus className="mr-2 h-4 w-4" /> New Session
+        </Button>
+      </div>
 
       {inProgressCount > 0 && status !== 'in_progress' && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm flex items-center justify-between">
@@ -157,7 +207,12 @@ const SessionsTab: React.FC = () => {
         <EmptyState
           icon={<Activity className="h-10 w-10" />}
           title="No sessions yet"
-          description="Start a workout from the Workouts tab to log your first session."
+          description="Start a workout to log your first session, or jump in directly from the Workouts tab."
+          action={
+            <Button onClick={openCreate} disabled={workouts.length === 0}>
+              <Plus className="mr-2 h-4 w-4" /> New Session
+            </Button>
+          }
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -315,6 +370,47 @@ const SessionsTab: React.FC = () => {
         description={`Delete the ${deleteTarget?.workoutName} session? This cannot be undone.`}
         isLoading={deleteSession.isPending}
       />
+
+      <FormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="New Session"
+        description="Pick a workout and start time. The session opens in progress so you can log sets live."
+        size="md"
+        submitLabel="Start Session"
+        onSubmit={handleCreate}
+        isSubmitting={isCreating}
+        canSubmit={!!newWorkoutId && workouts.length > 0}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="ns-workout">Workout</Label>
+          {workouts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No workouts yet — create one in the Workouts tab first.
+            </p>
+          ) : (
+            <Select value={newWorkoutId} onValueChange={setNewWorkoutId}>
+              <SelectTrigger id="ns-workout">
+                <SelectValue placeholder="Select a workout" />
+              </SelectTrigger>
+              <SelectContent>
+                {workouts.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="ns-start"><Clock className="inline h-3 w-3 mr-1" />Start time</Label>
+          <Input
+            id="ns-start"
+            type="datetime-local"
+            value={newStartedAt}
+            onChange={(e) => setNewStartedAt(e.target.value)}
+          />
+        </div>
+      </FormDialog>
     </div>
   );
 };

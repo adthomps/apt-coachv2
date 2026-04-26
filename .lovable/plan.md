@@ -1,159 +1,146 @@
-## Goal
+# APT Coach — Command Center, Health Depth & Chrome
 
-Reduce surface area, unify patterns, and align to APT principles (one canonical home per responsibility, design tokens only, state-aware surfaces, AI as augmentation). Keep the current mock API layer — no Lovable Cloud yet.
+Scope is large, so I'll break it into 4 phases. Approve and I'll execute Phase 1 first, then continue.
 
-## Diagnosis — what's too much today
+---
 
-- **8 top-level routes** (Dashboard, Exercises, Workouts, Programs, Schedule, Sessions, Snapshots, Admin) — Sessions duplicates Schedule; Exercises/Workouts/Programs are three near-identical CRUD pages.
-- **Inconsistent list patterns**: each list page rebuilds its own search bar, filter chips, difficulty badge logic, empty state, and loading state.
-- **Imports scattered**: BodySpec import lives in `Snapshots.tsx` *and* `SnapshotImportDialog.tsx`; Blood panel import is its own dialog; Admin has bulk import for everything else. Three different shapes.
-- **Snapshots page mixes** scan history, blood panels, and a JSON paste form in tabs — too many concerns.
-- **Dashboard** shows 5 KPI cards + insights + schedule strip + progress compare + current snapshot + recommendation — every section competes for "hero" emphasis (violates APT: one hero per view).
+## Phase 1 — App chrome (footer + user menu) and small Training/Sessions ergonomics
 
-## Target information architecture (aggressive consolidation)
+**Layout / chrome (`src/components/Layout.tsx`)**
+- Add a sticky **footer** with: `© {year} APT Coach`, version chip, "Admin" link (admin role only), "User Guide" link, "Imports" link (moves out of Admin header).
+- Replace the standalone `Settings` icon + `LogOut` button in header with a **user dropdown** (shadcn `dropdown-menu`):
+  - Header shows user name + email
+  - Items: **Profile**, **Settings**, **User Guide**, divider, **Sign out**
+  - Mobile sheet gets the same grouped block at the bottom
+- Move "Import Health Data" entry point from Admin header to footer link `/admin?tab=imports` (Admin keeps it, but footer becomes the discoverable home).
 
-Reduce 8 routes → 5:
+**Training → Sessions tab (`src/components/SessionsTab.tsx`, `src/pages/Training.tsx`)**
+- Add a primary **"New Session"** button in the Sessions tab toolbar (matches Exercises/Workouts/Programs pattern). Opens FormDialog to pick a workout + start date/time → creates an `in_progress` session and navigates to `/workouts/:id/start?resume=…`.
+- Keep existing edit dialog for retroactive session entry.
 
-| Route | Replaces | Purpose |
-|---|---|---|
-| `/dashboard` | Dashboard | One hero (latest insight), one secondary band (KPIs), one tertiary band (next session). Nothing else. |
-| `/training` | Exercises + Workouts + Programs | Single hub with tabs: **Library** (exercises) · **Workouts** · **Programs**. Shared search + filter shell. |
-| `/schedule` | Schedule + Sessions | Calendar/list view; "Sessions" becomes the *Completed* filter on the same page. |
-| `/health` | Snapshots (renamed) | Two tabs: **Body Scans** (DEXA/BodySpec) · **Blood Panels** (RythmHealth). View-only; no import UI here. |
-| `/admin` | Admin | Single home for **all** imports: Body Scans, Blood Panels, Exercises, Workouts, Programs. Plus Import History. |
+---
 
-`/sessions` and `/snapshots` redirect to their replacements so existing links don't break.
+## Phase 2 — Dashboard Command Center redesign
 
-## Shared design system primitives (APT-aligned)
+Rebuild `src/pages/Dashboard.tsx` into 3 stacked sections aligned to your wording. All deterministic; reuses existing `getBodyScanInsights`, `getBloodPanelInsights`, and `protocol.ts`.
 
-Create a small set of reusable components so every list page looks and behaves the same. All built on existing shadcn primitives, using only semantic tokens.
+### 2a. Health Command Summary (new section)
+Top band — a compact summary card with three columns:
+- **Active Health Signals** — chips for "What changed" (last DEXA delta), "What to keep doing", "Current inputs" (latest scan date, latest panel date, latest Withings date).
+- **Priority Direction** — top 1–2 protocol recommendations (from `protocol.ts`) rendered as a directive ("Lean into hypertrophy", "Cap deficit at …").
+- **Training Continuity** — adherence %, current streak, next session day-of-week.
 
-1. **`PageHeader`** — title + description + optional actions slot. One per page.
-2. **`ListToolbar`** — search input + filter chip row + result count. Used by Library / Workouts / Programs / Schedule / Imports / Insights.
-3. **`EntityCard`** — standard card for a list item: title, metadata row, badge row, action menu. Replaces the bespoke cards in each page.
-4. **`EmptyState`** — icon + heading + 1-sentence body + single CTA. Replaces the 6+ ad-hoc empty cards.
-5. **`StatusBadge`** — one place for difficulty / out-of-range / status colors (today these are reimplemented in 4 files).
-6. **`SectionCard`** — wraps `Card` with consistent padding, header, and one of `default | subtle | feature` variants per APT card matrix.
+### 2b. Health Direction (Dexa · Rythm · Withings)
+Three-up grid of provider cards, each with:
+- Status pill (Optimal / Watch / Concern) derived from existing insight categories
+- 1–2 top **Signals** ("ApoB out of range")
+- **Priority Action** (from protocol)
+- **Food Guidance** snippet (from `protocol.ts` `FoodSuggestion`)
+- "Open Health" link
 
-These live in `src/components/common/`. Existing pages refactor to use them — no new design tokens, no new colors.
+### 2c. Training section
+- **Training Pulse** — small sparkline-style strip: sessions completed in last 14d, total volume trend.
+- **Adherence** card (existing logic).
+- **Upcoming** — next 3 scheduled sessions with quick Start.
+- **Latest Completed Session** — performance snapshot (volume, completion %, RPE, duration) with link to `SessionDetail`.
+- **Training Insights** — reuses `session-insights.ts` rules; renders top 2 across last 5 sessions.
 
-## Health Data redesign (`/health`)
+### 2d. Today's Headlines + Supporting Insights
+- Keep "Today's Headline Insight" in its current position (band 1 above the new sections, or as the lead inside Health Command Summary — I'll put it as a thin lead inside Health Command Summary to avoid duplicate cards).
+- Move "Supporting Insights" into a collapsible **"More insights"** section at the bottom (so it doesn't dominate). If signal volume gets high we add a dedicated `/insights` tab — flagged as a future task, not built now.
 
-- Rename route `/snapshots` → `/health`; keep redirect.
-- Two tabs only: **Body Scans** and **Blood Panels**. Drop the third "Import" tab — imports move to Admin.
-- Each tab uses the same layout: left rail = `EntityCard` list (date + source + flag count), right pane = detail view.
-- Body Scans detail: existing key-metrics grid + regional changes + Compare-to-previous (already built).
-- Blood Panels detail: existing `BloodPanelDetail` component, with an "Generate Insights" action that calls the existing analyze hook.
-- Source labels normalized: "BodySpec (DEXA)" and "RythmHealth (Blood Panel)".
+Body composition data is woven into Health Command Summary (chips) and the Dexa card in Health Direction — not a separate band.
 
-## Admin redesign (`/admin`) — single home for imports
+---
 
-Tabs:
-1. **Imports** — one unified flow with a source picker:
-   - Body Scan (BodySpec JSON) — moves logic out of `Snapshots.tsx` and `SnapshotImportDialog.tsx`
-   - Blood Panel (RythmHealth CSV) — moves out of `BloodPanelImportDialog.tsx`
-   - Exercises (JSON array)
-   - Workouts (JSON array)
-   - Programs (JSON array)
-   - Each picker shows: format hint, "Load Sample" button, paste area, **Validate & Preview**, **Import**. Identical UX for every type.
-2. **Import History** — already exists, kept as-is.
-3. **Data Health** *(new, small)* — counts of records per entity + "last import" timestamps so the admin sees the system state at a glance.
+## Phase 3 — Health Data depth (DEXA + Rythm enhancements)
 
-The two existing import dialogs (`SnapshotImportDialog`, `BloodPanelImportDialog`) get retired; their parsing logic moves into `src/lib/importers/{bodyspec,rythmhealth,exercises,workouts,programs}.ts` so it can be shared and unit-tested.
+`src/pages/Health.tsx`, plus new presentational components.
 
-## Training hub (`/training`)
+### 3a. Shared "Metric Guide" primitive
+- New `src/components/health/MetricGuide.tsx` — accordion item: title, 1-line meaning, "Why it matters", "Coaching suggestions" bullets. Pure-content driven.
+- New `src/lib/health/metric-copy.ts` — versioned static copy keyed by metric id (Weight, Body Fat, Lean Mass, Fat Mass, Lean Mass Ratio, Visceral Fat Area, Region/Arms/Legs/Trunk, T-Score, Z-Score, Lumbar, Femur, plus blood markers). Single source of truth, easy to edit.
 
-One page, three tabs, one toolbar. Each tab is a `ListToolbar` + grid of `EntityCard`.
+### 3b. DEXA tab — Overview / Body Composition / Bone Density sub-tabs
+Within the selected DEXA scan detail, replace the single-column layout with `Tabs`:
+- **Overview** — current KPI grid + Metric Guide accordion (Weight, Body Fat, Lean Mass, Fat Mass).
+- **Body Composition**
+  - Lean Mass % and Fat Mass % rings/bars (existing).
+  - **Body Region Load bars** — new horizontal stacked bars showing each region's share of (fat + lean) so you can see relative load. Reads from `regionalData`.
+  - **Compare bars** — new component `<CompareBars>` showing Current vs. Prior for Weight / Body Fat / Lean Mass / Fat Mass driven by the existing `comparison` object and selectable prior scan (compare-window selector added above the detail).
+  - Metric Guide for Lean Mass Ratio + Visceral Fat Area.
+- **Bone Density**
+  - Reads `regionalData`/scan extras for T-Score, Z-Score, Lumbar, Femur (we'll extend `Snapshot` schema with optional `boneDensity?: { tScore, zScore, lumbar, femur }` and seed mock data; importer keeps it optional).
+  - Metric Guide for each.
 
-- **Library tab**: existing exercise filtering by movement pattern.
-- **Workouts tab**: search + filter by difficulty.
-- **Programs tab**: search + filter by goal.
+A **Compare Window** selector (Latest vs Previous · vs Baseline · vs custom) sits above the sub-tabs and feeds both the KPI deltas and the new compare bars.
 
-Create / Edit dialogs are reused as-is (`ExerciseDialog`, `WorkoutDialog`, the inline Programs dialog stays). Routing: `/training?tab=library|workouts|programs`. Deep links from Dashboard land on the right tab.
+### 3c. Rythm Health Panels — Blood Signal Summary + sub-tabs
+Within the selected panel:
+- **Blood Signal Summary** band (new) — counts: Out of Range, Improved, Worsened, Unchanged + 3 mini-trends (Out-of-Range trend, Optimal Marker trend, Delta Magnitude) computed from previous panel comparison.
+- **Top Changes** — new `<MarkerCompareBars>` for Total Testosterone, Triglycerides, Total Cholesterol (configurable list).
+- **Panel Overview** — Optimal/Average/Out-of-Range counts out of total; Compare Window selector.
+- **Markers** sub-tab — filter chips (All / Out of Range / Average / Optimal); each marker is a collapsible row with reference range, status, why-it-matters and suggestions (driven by `metric-copy.ts`).
+- **Marker Changes** sub-tab — paired diff view with tags (Improved, Worsened, Still Out of Range, Unchanged).
+- **Insights** sub-tab — current `getBloodPanelInsights` output rendered with Source / Reasoning / Action / Tag (concern, watch, keep). Each opens to a detail panel.
 
-## Dashboard simplification
+### 3d. Withings tab expansion
+Restructure into device sub-sections (placeholder cards for devices without data; only "Body Scan" populated from existing data):
+- **Body Scan / Scale** — date + age of reading, KPIs (Weight, Body Fat, Fat Mass, Lean Mass, Muscle, Visceral Fat). Muscle + Visceral added as optional fields on snapshot for Withings provider; mock data seeded.
+- **BPM (Blood Pressure)** — empty-state card with "Coming soon — log a reading" button (placeholder, no data model yet — flagged as future).
+- **BeamO (Temp)** — empty-state card (placeholder).
+- **U-Scan** — empty-state card (placeholder).
 
-Reduce to three bands, one hero each:
+Empty-state placeholders use the existing `EmptyState` component so the UI is honest about what's wired vs planned.
 
-1. **Hero — Today's Insight**: the single highest-priority adaptive recommendation, with a "Why" explanation grounded in real data (last scan delta + adherence). One CTA. Uses `feature` card variant.
-2. **Body composition KPIs**: 4 metrics (Weight, Body Fat %, Lean Mass, Adherence) — drop the 5th, use `default` card.
-3. **Up next**: next 3 scheduled sessions only. Link to `/schedule` for full view. `subtle` card.
+---
 
-Move "Progress Compare" + "Current Snapshot" into `/health` where they belong (already there). Dashboard stops being a kitchen sink.
+## Phase 4 — Imports relocation + cleanup
 
-## AI Insights surface (mock-data backed)
+- Admin keeps the imports tab but is no longer the marketed entry point.
+- Footer "Imports" link → `/admin?tab=imports` (and we can later split imports into its own route `/imports` if you prefer; not in this phase).
+- Health page header "Import in Admin" button replaced with a smaller link in each tab's empty-state only.
 
-A new component `AIInsightsPanel` rendered in two places:
-- Health Data → Body Scan detail (food + training suggestions from latest delta)
-- Health Data → Blood Panel detail (food + lifestyle suggestions from out-of-range markers)
+---
 
-**No new AI calls yet** — extends the existing rule-based engines (`src/lib/protocol.ts`, `src/lib/blood-marker-engine.ts`, `src/lib/adaptive-engine.ts`) to emit a structured `Insight` shape:
+## Files (created / edited)
 
-```ts
-{ id, severity, category: 'food'|'training'|'schedule'|'lifestyle',
-  title, rationale, evidence: { source, value, reference }, actions: [...] }
-```
+**New**
+- `src/components/Footer.tsx`
+- `src/components/UserMenu.tsx`
+- `src/components/health/MetricGuide.tsx`
+- `src/components/health/CompareBars.tsx`
+- `src/components/health/RegionLoadBars.tsx`
+- `src/components/health/BoneDensityPanel.tsx`
+- `src/components/health/BloodSignalSummary.tsx`
+- `src/components/health/MarkerCompareBars.tsx`
+- `src/components/dashboard/HealthCommandSummary.tsx`
+- `src/components/dashboard/HealthDirectionGrid.tsx`
+- `src/components/dashboard/TrainingPulse.tsx`
+- `src/lib/health/metric-copy.ts`
 
-Every insight must cite `evidence` (which scan, which marker, which value vs. reference range) — enforces the user's "no guessing or hyperbole" rule. Insights without evidence are filtered out.
+**Edited**
+- `src/components/Layout.tsx` (footer + user menu + remove standalone Settings/Logout)
+- `src/pages/Dashboard.tsx` (Command Center rebuild)
+- `src/pages/Health.tsx` (sub-tabs, compare-window selector, integrate new components)
+- `src/components/BloodPanelDetail.tsx` (sub-tab structure + filter chips + collapsible markers)
+- `src/components/SessionsTab.tsx` + `src/pages/Training.tsx` (New Session CTA)
+- `src/lib/api/types.ts` (optional `boneDensity`, optional muscle/visceral on bodyComposition)
+- `src/lib/api/mock-data.ts` (seed bone density + Withings muscle/visceral)
+- `src/pages/Admin.tsx` (no header changes — imports link comes from footer)
 
-A small adapter layer (`src/lib/ai/insights.ts`) is added now with the right shape so that when Lovable AI is enabled later, swapping the rule engine for an LLM-grounded version is a one-file change. No backend code added in this phase.
+---
 
-## File-level work breakdown
+## Out of scope / flagged future
+- Real device APIs (Apple Health, Withings cloud, Rythm) — manual entry only stays.
+- Splitting Insights into its own top-level page — only added if dashboard density gets too high after Phase 2.
+- BPM / BeamO / U-Scan data models — UI placeholders only this round.
 
-**New files**
-- `src/components/common/PageHeader.tsx`
-- `src/components/common/ListToolbar.tsx`
-- `src/components/common/EntityCard.tsx`
-- `src/components/common/EmptyState.tsx`
-- `src/components/common/StatusBadge.tsx`
-- `src/components/common/SectionCard.tsx`
-- `src/components/AIInsightsPanel.tsx`
-- `src/pages/Training.tsx` (replaces Exercises/Workouts/Programs pages as routed entry)
-- `src/pages/Health.tsx` (replaces Snapshots)
-- `src/lib/importers/bodyspec.ts`
-- `src/lib/importers/rythmhealth.ts`
-- `src/lib/importers/index.ts`
-- `src/lib/ai/insights.ts`
+---
 
-**Refactored**
-- `src/App.tsx` — new routes, redirects from `/snapshots`, `/sessions`, `/exercises`, `/workouts`, `/programs`.
-- `src/components/Layout.tsx` — nav reduced to 5 items.
-- `src/pages/Admin.tsx` — adds Body Scan + Blood Panel import sources; uses new importers.
-- `src/pages/Dashboard.tsx` — three-band layout, single hero.
-- `src/pages/Schedule.tsx` — adds "Completed" filter that supersedes the Sessions page.
+## Validation
+- Type-check after each phase (`tsc`).
+- Manual walk-through: Dashboard (with and without data), Health → all 3 tabs and sub-tabs, Compare window switching, Sessions "New Session" flow, Footer links + User dropdown on desktop and mobile.
+- Confirm no regression on existing `getBodyScanInsights` / `getBloodPanelInsights` / `protocol.ts` outputs (reused, not rewritten).
 
-**Removed**
-- `src/pages/Exercises.tsx`, `src/pages/Workouts.tsx`, `src/pages/Programs.tsx`, `src/pages/Sessions.tsx`, `src/pages/Snapshots.tsx` (logic merged into Training/Schedule/Health).
-- `src/components/SnapshotImportDialog.tsx`, `src/components/BloodPanelImportDialog.tsx` (logic moves to Admin + importers).
-
-**Unchanged**
-- API client (`src/lib/api/*`) — same mock layer, same hooks.
-- `WorkoutStart`, `Settings`, auth, protected routes.
-- Existing dialogs (`ExerciseDialog`, `WorkoutDialog`, `BloodPanelDetail`, `DeleteConfirmDialog`).
-
-## APT principle alignment (cross-check)
-
-| APT rule | How this plan satisfies it |
-|---|---|
-| One canonical source per topic | Imports live only in Admin; difficulty colors live only in `StatusBadge`; insights only in `lib/ai/insights.ts`. |
-| Design complete behavior | Every list surface has loading / empty / error / success defined via shared primitives. |
-| Structure before speed | Shared common components built first; pages refactor onto them. |
-| API-first where it matters | Import parsing extracted to `src/lib/importers/*` with typed inputs/outputs. |
-| AI follows the system | `Insight` shape requires evidence citations; LLM swap is a single adapter file later. |
-| Boundaries prevent category errors | Pages render; importers parse; engines reason; hooks fetch. No mixing. |
-
-## Out of scope (deferred)
-
-- Lovable Cloud / real persistence + auth (separate plan).
-- Real LLM-grounded insights via Lovable AI (adapter ready; enable later).
-- Mobile-specific layout polish beyond what shared primitives give for free.
-- Migrating from in-memory mock data to D1.
-
-## Acceptance checks
-
-- Nav has exactly 5 items (+ Admin if role).
-- `/snapshots`, `/sessions`, `/exercises`, `/workouts`, `/programs` all redirect.
-- Every list page (Training tabs, Schedule, Admin Imports) uses `ListToolbar` + `EntityCard` + `EmptyState`.
-- Body Scan and Blood Panel imports are reachable only from `/admin`.
-- Dashboard renders only three bands; one is a `feature` card.
-- Every insight rendered in the UI has a non-empty `evidence` field; insights without evidence do not display.
+Approve and I'll start with Phase 1 (chrome) immediately, then continue Phase 2 → 3 → 4 in subsequent turns.
