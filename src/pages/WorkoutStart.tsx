@@ -87,6 +87,75 @@ const WorkoutStart = () => {
     setExpandedBlock(workout.blocks[0]?.id || null);
   };
 
+  // Hydrate from in-progress session when resuming
+  useEffect(() => {
+    if (!existingSession || !workout || sessionActive) return;
+    const logs: Record<string, SessionSetLog[]> = {};
+    for (const block of workout.blocks) {
+      for (const item of block.items) {
+        const key = `${block.id}_${item.id}`;
+        const stored = existingSession.exercises.find(e => e.exerciseId === item.exerciseId);
+        logs[key] = stored?.actualSets?.length
+          ? stored.actualSets
+          : Array.from({ length: item.sets }, (_, i) => ({
+              setNumber: i + 1, weight: 0, reps: item.repsMin, completed: false,
+            }));
+      }
+    }
+    setExerciseLogs(logs);
+    setSessionId(existingSession.id);
+    setSessionActive(true);
+    startedAtRef.current = existingSession.startedAt;
+    setExpandedBlock(workout.blocks[0]?.id || null);
+  }, [existingSession, workout, sessionActive]);
+
+  const buildExerciseLogs = (): SessionExerciseLog[] => {
+    if (!workout) return [];
+    const out: SessionExerciseLog[] = [];
+    for (const block of workout.blocks) {
+      for (const item of block.items) {
+        const key = `${block.id}_${item.id}`;
+        out.push({
+          exerciseId: item.exerciseId,
+          exerciseName: getExerciseName(item.exerciseId),
+          plannedSets: item.sets,
+          plannedRepsMin: item.repsMin,
+          plannedRepsMax: item.repsMax,
+          actualSets: exerciseLogs[key] || [],
+        });
+      }
+    }
+    return out;
+  };
+
+  const pauseSession = async () => {
+    if (!workout) return;
+    setIsPausing(true);
+    try {
+      if (sessionId) {
+        await updateSession.mutateAsync({
+          id: sessionId,
+          input: { status: 'in_progress', exercises: buildExerciseLogs() },
+        });
+      } else {
+        const created = await createSession.mutateAsync({
+          workoutId: workout.id,
+          workoutName: workout.name,
+          status: 'in_progress',
+          startedAt: startedAtRef.current || new Date().toISOString(),
+          exercises: buildExerciseLogs(),
+        });
+        setSessionId(created.id);
+      }
+      toast({ title: 'Session saved', description: 'Resume any time from Training → Sessions.' });
+      navigate('/training?tab=sessions');
+    } catch {
+      toast({ title: 'Could not save session', variant: 'destructive' });
+    } finally {
+      setIsPausing(false);
+    }
+  };
+
   const updateSet = (key: string, setIndex: number, field: keyof SessionSetLog, value: number | boolean) => {
     setExerciseLogs(prev => {
       const updated = { ...prev };
