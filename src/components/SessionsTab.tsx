@@ -16,8 +16,11 @@ import {
   useSessions,
   useUpdateSession,
   useDeleteSession,
+  queryKeys,
 } from '@/hooks/use-api-queries';
+import { useQueryClient } from '@tanstack/react-query';
 import { computeSessionSnapshot } from '@/lib/ai/session-insights';
+import { shiftScheduleForSession } from '@/lib/schedule-sync';
 import type { SessionMetrics, WorkoutSession } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -46,6 +49,7 @@ const SessionsTab: React.FC = () => {
   const { data: sessions = [], isLoading } = useSessions();
   const updateSession = useUpdateSession();
   const deleteSession = useDeleteSession();
+  const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('All');
@@ -99,6 +103,7 @@ const SessionsTab: React.FC = () => {
         avgHeartRate: avgHeartRate ? Number(avgHeartRate) : undefined,
         rpe: rpe ? Number(rpe) : undefined,
       };
+      const wasAbandoned = editing.status === 'abandoned';
       await updateSession.mutateAsync({
         id: editing.id,
         input: {
@@ -109,6 +114,10 @@ const SessionsTab: React.FC = () => {
           notes: notes || undefined,
         },
       });
+      if (editStatus === 'abandoned' && !wasAbandoned) {
+        const shifted = await shiftScheduleForSession(editing.workoutId, editing.workoutName, 'abandoned');
+        if (shifted) queryClient.invalidateQueries({ queryKey: queryKeys.schedule });
+      }
       toast({ title: 'Session updated' });
       setEditing(null);
     } catch {
