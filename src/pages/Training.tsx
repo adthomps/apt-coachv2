@@ -3,14 +3,14 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import {
-  Plus, Pencil, Trash2, Play, Dumbbell, Target, Layers, Library, ListChecks, Calendar as CalendarIcon,
+  Plus, Pencil, Trash2, Play, Dumbbell, Target, Layers, Library, ListChecks,
+  Calendar as CalendarIcon, Activity,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PageHeader from '@/components/common/PageHeader';
@@ -18,9 +18,11 @@ import ListToolbar from '@/components/common/ListToolbar';
 import EntityCard from '@/components/common/EntityCard';
 import EmptyState from '@/components/common/EmptyState';
 import StatusBadge from '@/components/common/StatusBadge';
+import FormDialog from '@/components/common/FormDialog';
 import ExerciseDialog from '@/components/ExerciseDialog';
 import WorkoutDialog from '@/components/WorkoutDialog';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
+import SessionsTab from '@/components/SessionsTab';
 import {
   useExercises, useCreateExercise, useUpdateExercise, useDeleteExercise,
   useWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout,
