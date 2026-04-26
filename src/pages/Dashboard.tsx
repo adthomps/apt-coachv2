@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ChevronDown, Upload } from 'lucide-react';
+import { Activity, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import PageHeader from '@/components/common/PageHeader';
@@ -11,9 +11,6 @@ import HealthCommandSummary from '@/components/dashboard/HealthCommandSummary';
 import HealthDirectionGrid from '@/components/dashboard/HealthDirectionGrid';
 import TrainingSection from '@/components/dashboard/TrainingSection';
 import { Button } from '@/components/ui/button';
-import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import {
   useSnapshots, useBloodPanels, useSchedule, useSessions,
 } from '@/hooks/use-api-queries';
@@ -176,31 +173,14 @@ const Dashboard: React.FC = () => {
           totalScheduled={totalScheduled}
         />
 
-        {/* 4. Supporting Insights — collapsed by default to keep the page calm */}
+        {/* 4. Supporting Insights */}
         {supportingInsights.length > 0 && (
-          <Collapsible>
-            <SectionCard variant="subtle">
-              <CollapsibleTrigger asChild>
-                <button className="w-full flex items-center justify-between text-left group">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">More insights</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {supportingInsights.length} additional signal{supportingInsights.length === 1 ? '' : 's'} from your scans and panels.
-                    </p>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-4">
-                <AIInsightsPanel
-                  insights={supportingInsights}
-                  title="Supporting Insights"
-                  description="Every recommendation cites the scan or marker it came from."
-                  emptyTitle="No additional signals"
-                />
-              </CollapsibleContent>
-            </SectionCard>
-          </Collapsible>
+          <AIInsightsPanel
+            insights={supportingInsights}
+            title="Supporting Insights"
+            description="Every recommendation cites the scan or marker it came from."
+            emptyTitle="No additional signals"
+          />
         )}
       </div>
     </Layout>
