@@ -251,7 +251,7 @@ const Health: React.FC = () => {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <KpiStat icon={<Scale />} label="Weight" value={`${selectedScan.bodyComposition.totalMass.toFixed(1)} lbs`}
-                        delta={comparison?.changes.totalMass.value} deltaSuffix=" lbs" metricKey="weight" />
+                        delta={comparison?.changes.totalMass.value} deltaSuffix=" lbs" neutralDelta metricKey="weight" />
                       <KpiStat icon={<Percent />} label="Body Fat" value={`${selectedScan.bodyComposition.bodyFatPercentage.toFixed(1)}%`}
                         delta={comparison?.changes.bodyFatPercentage.value} deltaSuffix="%" invertDelta metricKey="body_fat" />
                       <KpiStat icon={<TrendingUp />} label="Lean Mass" value={`${selectedScan.bodyComposition.leanMass.toFixed(1)} lbs`}
@@ -367,7 +367,7 @@ const Health: React.FC = () => {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <KpiStat icon={<Scale />} label="Weight" value={`${selectedWithings.bodyComposition.totalMass.toFixed(1)} lbs`}
-                        delta={withingsCompare?.changes.totalMass.value} deltaSuffix=" lbs" metricKey="weight" />
+                        delta={withingsCompare?.changes.totalMass.value} deltaSuffix=" lbs" neutralDelta metricKey="weight" />
                       <KpiStat icon={<Percent />} label="Body Fat" value={`${selectedWithings.bodyComposition.bodyFatPercentage.toFixed(1)}%`}
                         delta={withingsCompare?.changes.bodyFatPercentage.value} deltaSuffix="%" invertDelta metricKey="body_fat" />
                       <KpiStat icon={<TrendingUp />} label="Lean Mass" value={`${selectedWithings.bodyComposition.leanMass.toFixed(1)} lbs`}
@@ -417,7 +417,7 @@ const Health: React.FC = () => {
                                     <div className="flex items-center gap-4 shrink-0">
                                       <div className="text-right">
                                         <div className="font-semibold text-foreground tabular-nums">{r.bodyComposition.totalMass.toFixed(1)} lbs</div>
-                                        {dW !== null && <DeltaValue value={dW} suffix=" lbs" className="text-xs" />}
+                                        {dW !== null && <DeltaValue value={dW} suffix=" lbs" neutral className="text-xs" />}
                                       </div>
                                       <div className="text-right hidden sm:block">
                                         <div className="font-semibold text-foreground tabular-nums">{r.bodyComposition.bodyFatPercentage.toFixed(1)}%</div>
