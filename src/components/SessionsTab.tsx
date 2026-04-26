@@ -141,18 +141,54 @@ const SessionsTab: React.FC = () => {
     }
   };
 
+  const openCreate = () => {
+    setNewWorkoutId(workouts[0]?.id ?? '');
+    setNewStartedAt(fmtDateTimeLocal(new Date().toISOString()));
+    setCreateOpen(true);
+  };
+
+  const handleCreate = async () => {
+    if (!newWorkoutId) return;
+    const wk = workouts.find((w) => w.id === newWorkoutId);
+    if (!wk) return;
+    setIsCreating(true);
+    try {
+      const created = await createSession.mutateAsync({
+        workoutId: wk.id,
+        workoutName: wk.name,
+        status: 'in_progress',
+        startedAt: newStartedAt ? fromLocal(newStartedAt) : new Date().toISOString(),
+        exercises: [],
+      });
+      toast({ title: 'Session started', description: `${wk.name} is now in progress.` });
+      setCreateOpen(false);
+      navigate(`/workouts/${wk.id}/start?resume=${created.id}`);
+    } catch {
+      toast({ title: 'Could not start session', variant: 'destructive' });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <ListToolbar
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search by workout or notes…"
-        filters={STATUS_FILTERS}
-        selectedFilter={status}
-        onFilterChange={setStatus}
-        resultCount={filtered.length}
-        resultLabel="sessions"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div className="flex-1">
+          <ListToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search by workout or notes…"
+            filters={STATUS_FILTERS}
+            selectedFilter={status}
+            onFilterChange={setStatus}
+            resultCount={filtered.length}
+            resultLabel="sessions"
+          />
+        </div>
+        <Button onClick={openCreate} className="shrink-0">
+          <Plus className="mr-2 h-4 w-4" /> New Session
+        </Button>
+      </div>
 
       {inProgressCount > 0 && status !== 'in_progress' && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm flex items-center justify-between">
