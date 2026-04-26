@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Activity, Droplets, Calendar, Trash2, Upload, Sparkles, TrendingUp, Scale, Percent, TrendingDown } from 'lucide-react';
+import {
+  Activity, Droplets, Calendar, Trash2, Upload, Sparkles, TrendingUp,
+  Scale, Percent, TrendingDown, Plus,
+} from 'lucide-react';
 import Layout from '@/components/Layout';
 import PageHeader from '@/components/common/PageHeader';
 import EmptyState from '@/components/common/EmptyState';
@@ -14,6 +17,7 @@ import { Progress } from '@/components/ui/progress';
 import BloodPanelDetail from '@/components/BloodPanelDetail';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
+import WithingsImportDialog from '@/components/WithingsImportDialog';
 import {
   useSnapshots, useDeleteSnapshot,
   useBloodPanels, useDeleteBloodPanel,
@@ -22,6 +26,8 @@ import { snapshotApi } from '@/lib/api';
 import type { Snapshot, ProgressCompare, BloodPanel } from '@/lib/api/types';
 import { getBodyScanInsights, getBloodPanelInsights } from '@/lib/ai/insights';
 import { toast } from '@/hooks/use-toast';
+
+const isWithings = (s: Snapshot) => (s.provider || '').toLowerCase() === 'withings';
 
 const Health: React.FC = () => {
   const { data: snapshots = [], isLoading: snapsLoading } = useSnapshots();
