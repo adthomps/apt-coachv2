@@ -2,29 +2,31 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { User, LogOut, Dumbbell, Menu, Settings } from 'lucide-react';
+import { User, LogOut, Dumbbell, Menu, Settings as SettingsIcon, BookOpen, IdCard } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import UserMenu from '@/components/UserMenu';
+import Footer from '@/components/Footer';
 
 interface LayoutProps { children: React.ReactNode; }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Admin moved to the footer (role-gated). Main nav is product surfaces only.
   const navItems = [
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/training', label: 'Training' },
     { path: '/schedule', label: 'Schedule' },
     { path: '/health', label: 'Health Data' },
-    ...(hasRole('admin') ? [{ path: '/admin', label: 'Admin' }] : []),
   ];
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-muted/30 flex flex-col">
       <header className="bg-card border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -78,18 +80,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         </Link>
                       ))}
                     </nav>
-                    <div className="border-t border-border pt-4">
-                      <div className="flex items-center space-x-3 mb-4">
+                    <div className="border-t border-border pt-4 space-y-1">
+                      <div className="flex items-center space-x-3 px-1 mb-3">
                         <div className="h-10 w-10 bg-muted rounded-full flex items-center justify-center">
                           <User className="h-5 w-5 text-muted-foreground" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{user?.name}</p>
-                          <p className="text-xs text-muted-foreground">{user?.email}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                         </div>
                       </div>
-                      <Button variant="outline" className="w-full" onClick={logout}>
-                        <LogOut className="mr-2 h-4 w-4" />Sign Out
+                      <Link to="/settings" onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <IdCard className="mr-2 h-4 w-4" /> Profile
+                      </Link>
+                      <Link to="/settings" onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <SettingsIcon className="mr-2 h-4 w-4" /> Settings
+                      </Link>
+                      <Link to="/user-guide" onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted">
+                        <BookOpen className="mr-2 h-4 w-4" /> User Guide
+                      </Link>
+                      <Button variant="outline" className="w-full mt-2" onClick={logout}>
+                        <LogOut className="mr-2 h-4 w-4" /> Sign Out
                       </Button>
                     </div>
                   </div>
@@ -97,20 +111,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </Sheet>
             </div>
 
-            <div className="hidden md:flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <span className="text-sm font-medium text-foreground hidden lg:block">{user?.name}</span>
-              </div>
-              <Link to="/settings"><Button variant="ghost" size="sm"><Settings className="h-4 w-4" /></Button></Link>
-              <Button variant="ghost" size="sm" onClick={logout}><LogOut className="h-4 w-4" /></Button>
+            <div className="hidden md:flex items-center">
+              <UserMenu />
             </div>
           </div>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">{children}</main>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">{children}</main>
+      <Footer />
     </div>
   );
 };
