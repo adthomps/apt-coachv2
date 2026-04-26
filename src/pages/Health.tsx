@@ -307,6 +307,139 @@ const Health: React.FC = () => {
             )}
           </TabsContent>
 
+          {/* ============ Withings Smart Scale ============ */}
+          <TabsContent value="withings" className="mt-6">
+            {withingsReadings.length === 0 ? (
+              <EmptyState
+                icon={<Scale className="h-12 w-12" />}
+                title="No Withings readings yet"
+                description="Log a smart-scale reading to track weight, body fat %, and lean mass between DEXA scans."
+                action={
+                  <Button onClick={() => setWithingsImportOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />Add Reading
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="space-y-6">
+                {/* KPI strip */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Scale className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Weight</span>
+                      </div>
+                      <div className="text-2xl font-bold text-foreground">{withingsLatest!.bodyComposition.totalMass.toFixed(1)} lbs</div>
+                      {withingsDelta && (
+                        <div className={`text-sm ${changeColor(withingsDelta.weight)}`}>{formatChange(withingsDelta.weight, ' lbs')}</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Percent className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Body Fat</span>
+                      </div>
+                      <div className="text-2xl font-bold text-foreground">{withingsLatest!.bodyComposition.bodyFatPercentage.toFixed(1)}%</div>
+                      {withingsDelta && (
+                        <div className={`text-sm ${changeColor(withingsDelta.bf, true)}`}>{formatChange(withingsDelta.bf, '%')}</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 mb-1">
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Lean Mass</span>
+                      </div>
+                      <div className="text-2xl font-bold text-foreground">{withingsLatest!.bodyComposition.leanMass.toFixed(1)} lbs</div>
+                      {withingsDelta && (
+                        <div className={`text-sm ${changeColor(withingsDelta.lean)}`}>{formatChange(withingsDelta.lean, ' lbs')}</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 mb-1">
+                        <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Fat Mass</span>
+                      </div>
+                      <div className="text-2xl font-bold text-foreground">{withingsLatest!.bodyComposition.fatMass.toFixed(1)} lbs</div>
+                      {withingsDelta && (
+                        <div className={`text-sm ${changeColor(withingsDelta.fat, true)}`}>{formatChange(withingsDelta.fat, ' lbs')}</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Reading history + add */}
+                <SectionCard
+                  title="Reading History"
+                  description={`${withingsReadings.length} reading${withingsReadings.length === 1 ? '' : 's'} from your Withings smart scale.`}
+                  actions={
+                    <Button size="sm" onClick={() => setWithingsImportOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />Add Reading
+                    </Button>
+                  }
+                >
+                  <div className="space-y-2">
+                    {withingsReadings.map((r, idx) => {
+                      const prev = withingsReadings[idx + 1];
+                      const dW = prev ? r.bodyComposition.totalMass - prev.bodyComposition.totalMass : null;
+                      const dBf = prev ? r.bodyComposition.bodyFatPercentage - prev.bodyComposition.bodyFatPercentage : null;
+                      return (
+                        <div
+                          key={r.id}
+                          className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-foreground">
+                                {format(new Date(r.scanDate), 'EEE, MMM d, yyyy')}
+                              </div>
+                              {r.notes && (
+                                <div className="text-xs text-muted-foreground truncate italic">"{r.notes}"</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm shrink-0">
+                            <div className="text-right">
+                              <div className="font-semibold text-foreground">{r.bodyComposition.totalMass.toFixed(1)} lbs</div>
+                              {dW !== null && (
+                                <div className={`text-xs ${changeColor(dW)}`}>{formatChange(dW, ' lbs')}</div>
+                              )}
+                            </div>
+                            <div className="text-right hidden sm:block">
+                              <div className="font-semibold text-foreground">{r.bodyComposition.bodyFatPercentage.toFixed(1)}%</div>
+                              {dBf !== null && (
+                                <div className={`text-xs ${changeColor(dBf, true)}`}>{formatChange(dBf, '%')}</div>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setDeleteScanTarget(r)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SectionCard>
+
+                <p className="text-xs text-muted-foreground">
+                  Smart-scale readings track <strong>day-to-day trends</strong>. For ground-truth body composition (regional, bone density), import a DEXA scan from Admin.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
           {/* ============ Blood Panels ============ */}
           <TabsContent value="blood" className="mt-6">
             {panels.length === 0 ? (
