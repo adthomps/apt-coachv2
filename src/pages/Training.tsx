@@ -36,7 +36,7 @@ import type {
 import { MOVEMENT_PATTERN_LABELS, BLOCK_TYPE_LABELS } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
-type TrainingTab = 'library' | 'workouts' | 'programs';
+type TrainingTab = 'library' | 'workouts' | 'programs' | 'sessions';
 
 const GOAL_LABELS: Record<string, string> = {
   strength: 'Strength', hypertrophy: 'Hypertrophy', endurance: 'Endurance',
@@ -62,11 +62,13 @@ const Training: React.FC = () => {
             <TabsTrigger value="library"><Library className="mr-1.5 h-4 w-4" />Library</TabsTrigger>
             <TabsTrigger value="workouts"><ListChecks className="mr-1.5 h-4 w-4" />Workouts</TabsTrigger>
             <TabsTrigger value="programs"><Layers className="mr-1.5 h-4 w-4" />Programs</TabsTrigger>
+            <TabsTrigger value="sessions"><Activity className="mr-1.5 h-4 w-4" />Sessions</TabsTrigger>
           </TabsList>
 
           <TabsContent value="library" className="mt-4"><LibraryTab /></TabsContent>
           <TabsContent value="workouts" className="mt-4"><WorkoutsTab /></TabsContent>
           <TabsContent value="programs" className="mt-4"><ProgramsTab /></TabsContent>
+          <TabsContent value="sessions" className="mt-4"><SessionsTab /></TabsContent>
         </Tabs>
       </div>
     </Layout>
