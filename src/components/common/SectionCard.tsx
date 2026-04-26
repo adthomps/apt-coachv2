@@ -9,7 +9,7 @@ interface SectionCardProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
   actions?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }
 

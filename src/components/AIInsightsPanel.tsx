@@ -8,8 +8,8 @@ import { format } from 'date-fns';
 
 interface AIInsightsPanelProps {
   insights: Insight[];
-  title?: string;
-  description?: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
   emptyTitle?: string;
 }
 
