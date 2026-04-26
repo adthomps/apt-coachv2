@@ -62,9 +62,9 @@ const Training: React.FC = () => {
             <TabsTrigger value="programs"><Layers className="mr-1.5 h-4 w-4" />Programs</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="library" className="mt-6"><LibraryTab /></TabsContent>
-          <TabsContent value="workouts" className="mt-6"><WorkoutsTab /></TabsContent>
-          <TabsContent value="programs" className="mt-6"><ProgramsTab /></TabsContent>
+          <TabsContent value="library" className="mt-4"><LibraryTab /></TabsContent>
+          <TabsContent value="workouts" className="mt-4"><WorkoutsTab /></TabsContent>
+          <TabsContent value="programs" className="mt-4"><ProgramsTab /></TabsContent>
         </Tabs>
       </div>
     </Layout>
@@ -111,12 +111,6 @@ const LibraryTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />Add Exercise
-        </Button>
-      </div>
-
       <ListToolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -126,6 +120,11 @@ const LibraryTab: React.FC = () => {
         onFilterChange={setPattern}
         resultCount={filtered.length}
         resultLabel="exercises"
+        action={
+          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />Add Exercise
+          </Button>
+        }
       />
 
       {isLoading ? (
@@ -239,12 +238,6 @@ const WorkoutsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />Create Workout
-        </Button>
-      </div>
-
       <ListToolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -254,6 +247,11 @@ const WorkoutsTab: React.FC = () => {
         onFilterChange={setDifficulty}
         resultCount={filtered.length}
         resultLabel="workouts"
+        action={
+          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />Create Workout
+          </Button>
+        }
       />
 
       {isLoading ? (
@@ -451,10 +449,6 @@ const ProgramsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Create Program</Button>
-      </div>
-
       <ListToolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -464,6 +458,7 @@ const ProgramsTab: React.FC = () => {
         onFilterChange={setGoal}
         resultCount={filtered.length}
         resultLabel="programs"
+        action={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Create Program</Button>}
       />
 
       {isLoading ? (

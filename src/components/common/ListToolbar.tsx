@@ -18,25 +18,29 @@ interface ListToolbarProps {
   onFilterChange?: (v: string) => void;
   resultCount?: number;
   resultLabel?: string;
+  action?: React.ReactNode;
 }
 
-/** Shared list toolbar: search + filter chips + result count. APT-aligned. */
+/** Shared list toolbar: search + filter chips + result count + optional action. APT-aligned. */
 const ListToolbar: React.FC<ListToolbarProps> = ({
   searchValue, onSearchChange, searchPlaceholder = 'Search...',
   filters, selectedFilter, onFilterChange,
-  resultCount, resultLabel = 'results',
+  resultCount, resultLabel = 'results', action,
 }) => (
   <div className="space-y-3">
     <Card>
       <CardContent className="p-4 space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
         </div>
         {filters && filters.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1">
