@@ -336,6 +336,8 @@ export const mockSnapshots: Snapshot[] = [
     createdAt: '2024-08-05T07:05:00Z',
   },
 ];
+
+export const mockImportJobs: ImportJob[] = [
   {
     id: 'import_1', type: 'exercise_library', status: 'completed',
     totalItems: 16, processedItems: 16, successItems: 16, failedItems: 0,
