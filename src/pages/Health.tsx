@@ -221,9 +221,7 @@ const Health: React.FC = () => {
                       {/* AI Insights */}
                       <AIInsightsPanel
                         insights={scanInsights}
-                        title={
-                          <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />AI Insights</span> as unknown as string
-                        }
+                        title={<span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />AI Insights</span>}
                         description="Coaching grounded in your scan deltas. Every insight cites the reading it came from."
                       />
 
@@ -336,9 +334,7 @@ const Health: React.FC = () => {
                     <>
                       <AIInsightsPanel
                         insights={panelInsights}
-                        title={
-                          <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />AI Insights</span> as unknown as string
-                        }
+                        title={<span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />AI Insights</span>}
                         description="Each insight cites the marker, value, and reference range that triggered it."
                         emptyTitle="All markers in optimal range"
                       />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSearchParams } from 'react-router-dom';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,48 +8,174 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Upload, FileJson, CheckCircle, XCircle, Clock,
-  Eye, History, Settings
+  Eye, History, Settings, Activity, Droplets, Database, AlertTriangle,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
-import { importApi } from '@/lib/api';
-import { useImportJobs } from '@/hooks/use-api-queries';
+import PageHeader from '@/components/common/PageHeader';
+import SectionCard from '@/components/common/SectionCard';
+import EmptyState from '@/components/common/EmptyState';
+import {
+  importApi, snapshotApi, bloodPanelApi,
+} from '@/lib/api';
+import {
+  useImportJobs, useExercises, useWorkouts, usePrograms, useSnapshots, useBloodPanels,
+  useCreateSnapshot, useCreateBloodPanel, useAnalyzeSnapshot, useAnalyzeBloodPanel,
+} from '@/hooks/use-api-queries';
 import type { ImportType, ImportPreview } from '@/lib/api';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/hooks/use-api-queries';
+import { parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson } from '@/lib/importers';
+import { toast } from '@/hooks/use-toast';
 
-const Admin = () => {
+type ImportSource =
+  | 'body_scan'
+  | 'blood_panel'
+  | 'exercise_library'
+  | 'workouts'
+  | 'programs';
+
+const SOURCE_LABELS: Record<ImportSource, string> = {
+  body_scan: 'Body Scan (BodySpec / DEXA)',
+  blood_panel: 'Blood Panel (RythmHealth CSV)',
+  exercise_library: 'Exercises (JSON)',
+  workouts: 'Workouts (JSON)',
+  programs: 'Programs (JSON)',
+};
+
+const SAMPLE_DATA: Record<ImportSource, string> = {
+  body_scan: JSON.stringify({
+    source: 'bodyspec', scan_date: '2024-01-15',
+    total_mass_lbs: 181.9, fat_mass_lbs: 30.9, lean_mass_lbs: 143.9, bone_mass_lbs: 7.1, body_fat_pct: 17.0,
+  }, null, 2),
+  blood_panel: 'marker,value,unit,reference_range,status,time\nFree T3,4.25,pg/mL,2 - 4.4,optimal,2026-03-09\nApoB,131,mg/dL,0 - 90,outOfRange,2026-03-09',
+  exercise_library: JSON.stringify([{ name: 'Romanian Deadlift', movementPattern: 'hip_hinge', muscleGroups: ['hamstrings', 'glutes'], equipment: ['barbell'], difficulty: 'intermediate' }], null, 2),
+  workouts: JSON.stringify([{ name: 'Upper Body Strength', difficulty: 'intermediate', estimatedDuration: 60, blocks: [] }], null, 2),
+  programs: JSON.stringify([{ name: '8 Week Recomp', durationWeeks: 8, goal: 'recomposition', difficulty: 'intermediate' }], null, 2),
+};
+
+const Admin: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'imports';
+  const initialSource = (searchParams.get('source') as ImportSource) || 'body_scan';
+
   const queryClient = useQueryClient();
   const { data: importJobs = [] } = useImportJobs();
+  const { data: exercises = [] } = useExercises();
+  const { data: workouts = [] } = useWorkouts();
+  const { data: programs = [] } = usePrograms();
+  const { data: snapshots = [] } = useSnapshots();
+  const { data: bloodPanels = [] } = useBloodPanels();
+  const createSnapshot = useCreateSnapshot();
+  const createBloodPanel = useCreateBloodPanel();
+  const analyzeSnapshot = useAnalyzeSnapshot();
+  const analyzeBloodPanel = useAnalyzeBloodPanel();
 
-  const [activeTab, setActiveTab] = useState('import');
-  const [importType, setImportType] = useState<ImportType>('exercise_library');
-  const [jsonData, setJsonData] = useState('');
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [source, setSource] = useState<ImportSource>(initialSource);
+  const [rawText, setRawText] = useState('');
+  const [errors, setErrors] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handlePreview = async () => {
-    setError(null); setPreview(null); setIsValidating(true);
-    try {
-      const parsed = JSON.parse(jsonData);
-      setPreview(await importApi.preview(importType, parsed));
-    } catch (err) {
-      setError(err instanceof SyntaxError ? 'Invalid JSON format.' : 'Failed to validate.');
-    } finally { setIsValidating(false); }
+  const reset = () => {
+    setRawText(''); setErrors([]); setWarnings([]); setPreview(null);
   };
 
-  const handleCommit = async () => {
-    if (!preview?.isValid) return;
+  const setTab = (t: string) => {
+    setActiveTab(t);
+    setSearchParams({ tab: t });
+  };
+
+  const handleSourceChange = (s: ImportSource) => {
+    setSource(s);
+    reset();
+  };
+
+  // Body scan & blood panel: validate using importers (no preview structure)
+  const handleValidate = async () => {
+    setIsValidating(true);
+    setErrors([]); setWarnings([]); setPreview(null);
+    try {
+      if (source === 'body_scan') {
+        const result = parseBodyspecJson(rawText);
+        if (result.errors.length > 0) setErrors(result.errors);
+        if (result.warnings.length > 0) setWarnings(result.warnings);
+        if (result.data) {
+          setPreview({
+            type: 'snapshots', schemaVersion: '1.0', totalItems: 1, adds: 1, updates: 0, skips: 0, errors: 0,
+            items: [{ index: 0, action: 'add', name: `Scan ${result.data.snapshotInput.scanDate}`, data: result.data.snapshotInput as unknown as Record<string, unknown> }],
+            isValid: true,
+          });
+        }
+      } else if (source === 'blood_panel') {
+        const result = parseRythmHealthCsv(rawText);
+        if (result.errors.length > 0) setErrors(result.errors);
+        if (result.data) {
+          setPreview({
+            type: 'snapshots', schemaVersion: '1.0', totalItems: result.data.panelInput.markers.length,
+            adds: result.data.panelInput.markers.length, updates: 0, skips: 0,
+            errors: result.data.outOfRangeCount,
+            items: result.data.panelInput.markers.map((m, i) => ({
+              index: i, action: 'add' as const, name: `${m.marker}: ${m.value} ${m.unit}`, data: m as unknown as Record<string, unknown>,
+            })),
+            isValid: true,
+          });
+        }
+      } else {
+        const result = parseEntityArrayJson(rawText);
+        if (result.errors.length > 0) setErrors(result.errors);
+        if (result.data) {
+          const p = await importApi.preview(source as ImportType, result.data);
+          setPreview(p);
+        }
+      }
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!preview) return;
     setIsImporting(true);
     try {
-      await importApi.commit(importType, JSON.parse(jsonData));
-      setJsonData(''); setPreview(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.importJobs });
-      setActiveTab('history');
-    } catch { setError('Failed to import.'); }
-    finally { setIsImporting(false); }
+      if (source === 'body_scan') {
+        const result = parseBodyspecJson(rawText);
+        if (!result.data) throw new Error('Validation failed');
+        const saved = await createSnapshot.mutateAsync(result.data.snapshotInput);
+        try {
+          const recs = await analyzeSnapshot.mutateAsync(saved.id);
+          toast({ title: 'Body scan imported', description: `${recs.length} insight${recs.length !== 1 ? 's' : ''} generated.` });
+        } catch {
+          toast({ title: 'Body scan imported' });
+        }
+      } else if (source === 'blood_panel') {
+        const result = parseRythmHealthCsv(rawText);
+        if (!result.data) throw new Error('Validation failed');
+        const saved = await createBloodPanel.mutateAsync(result.data.panelInput);
+        try {
+          const recs = await analyzeBloodPanel.mutateAsync(saved.id);
+          toast({ title: 'Blood panel imported', description: `${result.data.panelInput.markers.length} markers, ${recs.length} insight${recs.length !== 1 ? 's' : ''}.` });
+        } catch {
+          toast({ title: 'Blood panel imported' });
+        }
+      } else {
+        const result = parseEntityArrayJson(rawText);
+        if (!result.data) throw new Error('Validation failed');
+        await importApi.commit(source as ImportType, result.data);
+        queryClient.invalidateQueries({ queryKey: queryKeys.importJobs });
+        queryClient.invalidateQueries({ queryKey: [source === 'exercise_library' ? 'exercises' : source] });
+        toast({ title: 'Import complete', description: `${result.data.length} ${SOURCE_LABELS[source]} imported.` });
+      }
+      reset();
+      setTab('history');
+    } catch (e) {
+      toast({ title: 'Import failed', description: e instanceof Error ? e.message : 'Unknown error', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const statusIcon = (s: string) => {
@@ -57,140 +184,200 @@ const Admin = () => {
     return <Clock className="h-4 w-4 text-warning animate-spin" />;
   };
 
-  const typeLabel = (t: ImportType) => ({ exercise_library: 'Exercises', workouts: 'Workouts', programs: 'Programs', snapshots: 'Snapshots' }[t] || t);
-
-  const sampleData: Record<ImportType, string> = {
-    exercise_library: JSON.stringify([{ name: "Romanian Deadlift", movementPattern: "hip_hinge", muscleGroups: ["hamstrings", "glutes"], equipment: ["barbell"], difficulty: "intermediate" }], null, 2),
-    workouts: JSON.stringify([{ name: "Upper Body Strength", difficulty: "intermediate", estimatedDuration: 60, blocks: [] }], null, 2),
-    programs: JSON.stringify([{ name: "8 Week Recomp", durationWeeks: 8, goal: "recomposition", difficulty: "intermediate" }], null, 2),
-    snapshots: JSON.stringify([{ scan_date: "2024-01-15", source: "bodyspec", total_mass_kg: 82.5, fat_mass_kg: 14.0, lean_mass_kg: 65.3, bone_mass_kg: 3.2, body_fat_pct: 17.0 }], null, 2),
-  };
+  const placeholderFor = (s: ImportSource) =>
+    s === 'blood_panel'
+      ? 'Paste CSV: marker,value,unit,reference_range,status,time'
+      : 'Paste JSON...';
 
   return (
     <Layout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Settings className="h-8 w-8 text-primary" />Admin
-          </h1>
-          <p className="text-muted-foreground leading-relaxed">Bulk import, data management, and admin tools</p>
-        </div>
+        <PageHeader
+          title="Admin"
+          icon={<Settings className="h-8 w-8 text-primary" />}
+          description="Single home for all data imports and system health."
+        />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setTab}>
           <TabsList>
-            <TabsTrigger value="import"><Upload className="mr-1.5 h-4 w-4" />Bulk Import</TabsTrigger>
+            <TabsTrigger value="imports"><Upload className="mr-1.5 h-4 w-4" />Imports</TabsTrigger>
             <TabsTrigger value="history"><History className="mr-1.5 h-4 w-4" />Import History</TabsTrigger>
+            <TabsTrigger value="data"><Database className="mr-1.5 h-4 w-4" />Data Health</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="import" className="mt-6">
+          {/* ============ Imports ============ */}
+          <TabsContent value="imports" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><FileJson className="h-5 w-5 text-primary" />Import Data</CardTitle>
-                    <CardDescription>Bulk import exercises, workouts, programs, or snapshots via JSON</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Select value={importType} onValueChange={v => setImportType(v as ImportType)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="exercise_library">Exercise Library</SelectItem>
-                        <SelectItem value="workouts">Workouts</SelectItem>
-                        <SelectItem value="programs">Programs</SelectItem>
-                        <SelectItem value="snapshots">Snapshots</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">JSON Data</label>
-                      <Button variant="ghost" size="sm" onClick={() => setJsonData(sampleData[importType])}>Load Sample</Button>
+                <SectionCard
+                  title={<span className="flex items-center gap-2"><FileJson className="h-5 w-5 text-primary" />Import Data</span>}
+                  description="Choose a source, paste data, validate, then import. Same flow for every type."
+                >
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Source</label>
+                      <Select value={source} onValueChange={(v) => handleSourceChange(v as ImportSource)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(Object.entries(SOURCE_LABELS) as [ImportSource, string][]).map(([v, l]) => (
+                            <SelectItem key={v} value={v}>{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Textarea placeholder="Paste JSON array..." value={jsonData} onChange={e => { setJsonData(e.target.value); setPreview(null); setError(null); }} rows={10} className="font-mono text-sm" />
-                    {error && <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg"><XCircle className="h-4 w-4" /><span className="text-sm">{error}</span></div>}
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1" onClick={handlePreview} disabled={!jsonData.trim() || isValidating}><Eye className="mr-2 h-4 w-4" />{isValidating ? 'Validating...' : 'Preview'}</Button>
-                      <Button className="flex-1" onClick={handleCommit} disabled={!preview?.isValid || isImporting}><Upload className="mr-2 h-4 w-4" />{isImporting ? 'Importing...' : 'Import'}</Button>
-                    </div>
-                  </CardContent>
-                </Card>
 
-                {preview && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>Preview</span>
-                        <Badge variant={preview.isValid ? 'default' : 'destructive'}>{preview.isValid ? 'Valid' : 'Has Errors'}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-4 gap-4 mb-4">
-                        <div className="p-3 bg-success/10 rounded-lg text-center"><div className="text-xl font-bold text-success">{preview.adds}</div><div className="text-xs text-muted-foreground">New</div></div>
-                        <div className="p-3 bg-primary/10 rounded-lg text-center"><div className="text-xl font-bold text-primary">{preview.updates}</div><div className="text-xs text-muted-foreground">Updates</div></div>
-                        <div className="p-3 bg-muted rounded-lg text-center"><div className="text-xl font-bold text-muted-foreground">{preview.skips}</div><div className="text-xs text-muted-foreground">Skipped</div></div>
-                        <div className="p-3 bg-destructive/10 rounded-lg text-center"><div className="text-xl font-bold text-destructive">{preview.errors}</div><div className="text-xs text-muted-foreground">Errors</div></div>
-                      </div>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {preview.items.map(item => (
-                          <div key={item.index} className="flex items-center justify-between p-2 border border-border rounded">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="h-4 w-4 text-success" />
-                              <span className="text-sm">{item.name}</span>
-                            </div>
-                            <Badge variant="secondary" className="text-xs">{item.action}</Badge>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">{source === 'blood_panel' ? 'CSV Data' : 'JSON Data'}</label>
+                      <Button variant="ghost" size="sm" onClick={() => { setRawText(SAMPLE_DATA[source]); setPreview(null); setErrors([]); }}>
+                        Load Sample
+                      </Button>
+                    </div>
+
+                    <Textarea
+                      placeholder={placeholderFor(source)}
+                      value={rawText}
+                      onChange={(e) => { setRawText(e.target.value); setPreview(null); setErrors([]); setWarnings([]); }}
+                      rows={10}
+                      className="font-mono text-xs"
+                    />
+
+                    {warnings.length > 0 && (
+                      <div className="p-3 bg-warning/10 rounded-lg space-y-1">
+                        {warnings.map((w, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm text-warning">
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />{w}
                           </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                    )}
+
+                    {errors.length > 0 && (
+                      <div className="p-3 bg-destructive/10 rounded-lg space-y-1">
+                        {errors.map((e, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm text-destructive">
+                            <XCircle className="h-3.5 w-3.5 shrink-0" />{e}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={handleValidate} disabled={!rawText.trim() || isValidating}>
+                        <Eye className="mr-2 h-4 w-4" />{isValidating ? 'Validating...' : 'Validate'}
+                      </Button>
+                      <Button className="flex-1" onClick={handleImport} disabled={!preview || isImporting}>
+                        <Upload className="mr-2 h-4 w-4" />{isImporting ? 'Importing...' : 'Import'}
+                      </Button>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {preview && (
+                  <SectionCard
+                    title="Preview"
+                    actions={<Badge variant={preview.isValid ? 'default' : 'destructive'}>{preview.isValid ? 'Valid' : 'Has Errors'}</Badge>}
+                  >
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                      <div className="p-3 bg-success/10 rounded-lg text-center">
+                        <div className="text-xl font-bold text-success">{preview.adds}</div>
+                        <div className="text-xs text-muted-foreground">{source === 'blood_panel' ? 'Markers' : 'New'}</div>
+                      </div>
+                      <div className="p-3 bg-primary/10 rounded-lg text-center">
+                        <div className="text-xl font-bold text-primary">{preview.updates}</div>
+                        <div className="text-xs text-muted-foreground">Updates</div>
+                      </div>
+                      <div className="p-3 bg-muted rounded-lg text-center">
+                        <div className="text-xl font-bold text-muted-foreground">{preview.skips}</div>
+                        <div className="text-xs text-muted-foreground">Skipped</div>
+                      </div>
+                      <div className="p-3 bg-destructive/10 rounded-lg text-center">
+                        <div className="text-xl font-bold text-destructive">{preview.errors}</div>
+                        <div className="text-xs text-muted-foreground">{source === 'blood_panel' ? 'Flagged' : 'Errors'}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {preview.items.map((item) => (
+                        <div key={item.index} className="flex items-center justify-between p-2 border border-border rounded text-sm">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CheckCircle className="h-3.5 w-3.5 text-success shrink-0" />
+                            <span className="truncate">{item.name}</span>
+                          </div>
+                          <Badge variant="secondary" className="text-xs shrink-0">{item.action}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
                 )}
               </div>
 
-              <Card className="h-fit">
-                <CardHeader>
-                  <CardTitle className="text-lg">Import Guide</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground space-y-3">
-                  <p>Provide a JSON array of objects. Click "Load Sample" for an example.</p>
+              <SectionCard variant="subtle" title="Import Guide" className="h-fit">
+                <div className="text-sm text-muted-foreground space-y-3">
+                  <p>One unified flow for every data source. Validation runs locally before import.</p>
                   <div className="space-y-2">
-                    <h4 className="font-medium text-foreground">Supported Types</h4>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary">Exercises</Badge>
-                      <Badge variant="secondary">Workouts</Badge>
-                      <Badge variant="secondary">Programs</Badge>
-                      <Badge variant="secondary">Snapshots</Badge>
-                    </div>
+                    <h4 className="font-medium text-foreground">Available Sources</h4>
+                    <ul className="space-y-1.5">
+                      <li className="flex gap-2"><Activity className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Body Scan — BodySpec JSON, lbs or kg</span></li>
+                      <li className="flex gap-2"><Droplets className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Blood Panel — RythmHealth CSV</span></li>
+                      <li className="flex gap-2"><FileJson className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Exercises / Workouts / Programs — JSON arrays</span></li>
+                    </ul>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </SectionCard>
             </div>
           </TabsContent>
 
+          {/* ============ History ============ */}
           <TabsContent value="history" className="mt-6">
-            <Card>
-              <CardHeader><CardTitle>Import History</CardTitle></CardHeader>
-              <CardContent>
-                {importJobs.length === 0 ? (
-                  <div className="text-center py-12"><History className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" /><p className="text-muted-foreground">No import history yet</p></div>
-                ) : (
-                  <div className="space-y-3">
-                    {importJobs.map(job => (
-                      <div key={job.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                        <div className="flex items-center gap-4">
-                          {statusIcon(job.status)}
-                          <div>
-                            <div className="font-medium text-foreground">{typeLabel(job.type)}</div>
-                            <div className="text-sm text-muted-foreground">{format(new Date(job.createdAt), 'MMM d, yyyy h:mm a')}</div>
-                          </div>
-                        </div>
-                        <div className="text-sm">
-                          <span className="text-success">{job.successItems}</span>
-                          <span className="text-muted-foreground"> / {job.totalItems}</span>
+            {importJobs.length === 0 ? (
+              <EmptyState
+                icon={<History className="h-10 w-10" />}
+                title="No imports yet"
+                description="Imported jobs appear here with status and counts."
+              />
+            ) : (
+              <SectionCard title="Recent Imports">
+                <div className="space-y-3">
+                  {importJobs.map((job) => (
+                    <div key={job.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        {statusIcon(job.status)}
+                        <div>
+                          <div className="font-medium text-foreground capitalize">{job.type.replace(/_/g, ' ')}</div>
+                          <div className="text-sm text-muted-foreground">{format(new Date(job.createdAt), 'MMM d, yyyy h:mm a')}</div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      <div className="text-sm">
+                        <span className="text-success font-medium">{job.successItems}</span>
+                        <span className="text-muted-foreground"> / {job.totalItems}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            )}
+          </TabsContent>
+
+          {/* ============ Data Health ============ */}
+          <TabsContent value="data" className="mt-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {[
+                { label: 'Exercises', count: exercises.length, icon: FileJson },
+                { label: 'Workouts', count: workouts.length, icon: FileJson },
+                { label: 'Programs', count: programs.length, icon: FileJson },
+                { label: 'Body Scans', count: snapshots.length, icon: Activity },
+                { label: 'Blood Panels', count: bloodPanels.length, icon: Droplets },
+              ].map((item) => (
+                <Card key={item.label}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-2 mb-1">
+                      <item.icon className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">{item.label}</span>
+                    </div>
+                    <div className="text-3xl font-bold text-foreground">{item.count}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
