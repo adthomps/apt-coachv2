@@ -251,13 +251,13 @@ const Health: React.FC = () => {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <KpiStat icon={<Scale />} label="Weight" value={`${selectedScan.bodyComposition.totalMass.toFixed(1)} lbs`}
-                        delta={comparison?.changes.totalMass.value} deltaSuffix=" lbs" />
+                        delta={comparison?.changes.totalMass.value} deltaSuffix=" lbs" metricKey="weight" />
                       <KpiStat icon={<Percent />} label="Body Fat" value={`${selectedScan.bodyComposition.bodyFatPercentage.toFixed(1)}%`}
-                        delta={comparison?.changes.bodyFatPercentage.value} deltaSuffix="%" invertDelta />
+                        delta={comparison?.changes.bodyFatPercentage.value} deltaSuffix="%" invertDelta metricKey="body_fat" />
                       <KpiStat icon={<TrendingUp />} label="Lean Mass" value={`${selectedScan.bodyComposition.leanMass.toFixed(1)} lbs`}
-                        delta={comparison?.changes.leanMass.value} deltaSuffix=" lbs" />
+                        delta={comparison?.changes.leanMass.value} deltaSuffix=" lbs" metricKey="lean_mass" />
                       <KpiStat icon={<TrendingDown />} label="Fat Mass" value={`${selectedScan.bodyComposition.fatMass.toFixed(1)} lbs`}
-                        delta={comparison?.changes.fatMass.value} deltaSuffix=" lbs" invertDelta />
+                        delta={comparison?.changes.fatMass.value} deltaSuffix=" lbs" invertDelta metricKey="fat_mass" />
                     </div>
 
                     <SectionCard title="Body Composition" description="Lean / fat distribution and regional breakdown.">
@@ -367,13 +367,13 @@ const Health: React.FC = () => {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <KpiStat icon={<Scale />} label="Weight" value={`${selectedWithings.bodyComposition.totalMass.toFixed(1)} lbs`}
-                        delta={withingsCompare?.changes.totalMass.value} deltaSuffix=" lbs" />
+                        delta={withingsCompare?.changes.totalMass.value} deltaSuffix=" lbs" metricKey="weight" />
                       <KpiStat icon={<Percent />} label="Body Fat" value={`${selectedWithings.bodyComposition.bodyFatPercentage.toFixed(1)}%`}
-                        delta={withingsCompare?.changes.bodyFatPercentage.value} deltaSuffix="%" invertDelta />
+                        delta={withingsCompare?.changes.bodyFatPercentage.value} deltaSuffix="%" invertDelta metricKey="body_fat" />
                       <KpiStat icon={<TrendingUp />} label="Lean Mass" value={`${selectedWithings.bodyComposition.leanMass.toFixed(1)} lbs`}
-                        delta={withingsCompare?.changes.leanMass.value} deltaSuffix=" lbs" />
+                        delta={withingsCompare?.changes.leanMass.value} deltaSuffix=" lbs" metricKey="lean_mass" />
                       <KpiStat icon={<TrendingDown />} label="Fat Mass" value={`${selectedWithings.bodyComposition.fatMass.toFixed(1)} lbs`}
-                        delta={withingsCompare?.changes.fatMass.value} deltaSuffix=" lbs" invertDelta />
+                        delta={withingsCompare?.changes.fatMass.value} deltaSuffix=" lbs" invertDelta metricKey="fat_mass" />
                     </div>
 
                     <SectionCard
@@ -498,8 +498,8 @@ const Health: React.FC = () => {
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <KpiStat icon={<Droplets />} label="Total Markers" value={selectedPanel.markers.length} />
-                        <KpiStat icon={<CheckCircle className="text-success" />} label="Optimal" value={<span className="text-success">{optimal}</span>} />
-                        <KpiStat icon={<AlertTriangle className="text-destructive" />} label="Out of Range" value={<span className="text-destructive">{flagged}</span>} />
+                        <KpiStat icon={<CheckCircle className="text-success" />} label="Optimal" value={<span className="text-success">{optimal}</span>} metricKey="markers_optimal" />
+                        <KpiStat icon={<AlertTriangle className="text-destructive" />} label="Out of Range" value={<span className="text-destructive">{flagged}</span>} metricKey="markers_out_of_range" />
                         <KpiStat icon={<Calendar />} label="Panel Date" value={<span className="text-lg">{format(new Date(selectedPanel.panelDate), 'MMM d, yyyy')}</span>} />
                       </div>
 
