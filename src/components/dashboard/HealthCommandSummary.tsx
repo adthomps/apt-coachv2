@@ -1,10 +1,11 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Activity, ArrowRight, Calendar, Compass, Dumbbell, Flame, Sparkles, TrendingDown, TrendingUp } from 'lucide-react';
+import { Activity, ArrowRight, Calendar, Compass, Dumbbell, Flame, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import SectionCard from '@/components/common/SectionCard';
+import DeltaValue from '@/components/health/DeltaValue';
 import type { Insight } from '@/lib/ai/insights';
 import type { Snapshot, BloodPanel, ProgressCompare } from '@/lib/api/types';
 
@@ -46,17 +47,15 @@ const HealthCommandSummary: React.FC<Props> = ({
     const fat = compare.changes.fatMass.value;
     if (Math.abs(lean) >= 0.5) {
       signals.push(
-        <Chip key="lean" tone={lean > 0 ? 'success' : 'warn'}
-          icon={lean > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}>
-          Lean {lean > 0 ? '+' : ''}{lean.toFixed(1)} lbs
+        <Chip key="lean">
+          Lean <DeltaValue value={lean} suffix=" lbs" className="text-xs" />
         </Chip>,
       );
     }
     if (Math.abs(fat) >= 0.5) {
       signals.push(
-        <Chip key="fat" tone={fat < 0 ? 'success' : 'warn'}
-          icon={fat < 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}>
-          Fat {fat > 0 ? '+' : ''}{fat.toFixed(1)} lbs
+        <Chip key="fat">
+          Fat <DeltaValue value={fat} suffix=" lbs" invert className="text-xs" />
         </Chip>,
       );
     }
