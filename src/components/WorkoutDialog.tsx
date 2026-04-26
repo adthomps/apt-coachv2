@@ -176,7 +176,7 @@ const WorkoutDialog: React.FC<WorkoutDialogProps> = ({ open, onOpenChange, onSub
               notes: it.notes?.trim() || undefined,
               order: ii,
             })),
-        })),
+        })) as CreateWorkoutInput['blocks'],
         tags: tags.trim() ? tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
       });
       onOpenChange(false);
