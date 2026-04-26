@@ -301,15 +301,30 @@ export interface SessionExerciseLog {
   notes?: string;
 }
 
+export interface SessionMetrics {
+  /** Active calories from a wearable (e.g. Apple Health). */
+  activeCalories?: number;
+  /** Total calories from a wearable. */
+  totalCalories?: number;
+  /** Average heart rate (bpm). */
+  avgHeartRate?: number;
+  /** Subjective Rate of Perceived Exertion 1–10. */
+  rpe?: number;
+}
+
 export interface WorkoutSession {
   id: string;
   workoutId: string;
   workoutName: string;
   programId?: string;
   status: 'in_progress' | 'completed' | 'abandoned';
+  /** ISO timestamp the session was started. */
   startedAt: string;
+  /** ISO timestamp the session was completed (if completed). */
   completedAt?: string;
   exercises: SessionExerciseLog[];
+  /** Wearable / Apple Health style metrics. Optional. */
+  metrics?: SessionMetrics;
   notes?: string;
   createdAt: string;
 }
