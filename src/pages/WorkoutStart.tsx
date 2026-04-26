@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,27 +11,33 @@ import {
 } from '@/components/ui/dialog';
 import {
   ArrowLeft, Play, CheckCircle, Dumbbell, TrendingUp,
-  Zap, Clock, ChevronDown, ChevronUp, Save
+  Zap, Clock, ChevronDown, ChevronUp, Save, PauseCircle,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
-import { useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations, useCreateSession, useAnalyzeSession } from '@/hooks/use-api-queries';
+import { useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations, useCreateSession, useUpdateSession, useSession, useAnalyzeSession } from '@/hooks/use-api-queries';
 import type { SessionExerciseLog, SessionSetLog, SessionMetrics } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
 const WorkoutStart = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const resumeId = searchParams.get('resume') || undefined;
   const navigate = useNavigate();
   const { data: workout, isLoading } = useWorkout(id);
+  const { data: existingSession } = useSession(resumeId);
   const { data: exercises = [] } = useExercises();
   const { data: profiles = [] } = usePerformanceProfiles();
   const { data: allRecs = [] } = useAdaptiveRecommendations();
   const createSession = useCreateSession();
+  const updateSession = useUpdateSession();
   const analyzeSession = useAnalyzeSession();
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
   const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, SessionSetLog[]>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isPausing, setIsPausing] = useState(false);
   const startedAtRef = useRef<string | null>(null);
 
   // Finish dialog state
