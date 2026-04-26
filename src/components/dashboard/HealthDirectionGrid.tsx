@@ -129,6 +129,7 @@ const HealthDirectionGrid: React.FC<Props> = ({
                   delta={compare?.changes.bodyFatPercentage.value}
                   deltaSuffix="%"
                   invertDelta
+                  metricKey="body_fat"
                 />
                 <KpiStat
                   icon={<TrendingUp />}
@@ -136,6 +137,7 @@ const HealthDirectionGrid: React.FC<Props> = ({
                   value={`${latestDexa.bodyComposition.leanMass.toFixed(1)} lbs`}
                   delta={compare?.changes.leanMass.value}
                   deltaSuffix=" lbs"
+                  metricKey="lean_mass"
                 />
               </>
             ) : null
@@ -166,6 +168,7 @@ const HealthDirectionGrid: React.FC<Props> = ({
                   icon={<Activity />}
                   label="Out of Range"
                   value={<span className={oor > 0 ? 'text-destructive' : 'text-success'}>{oor}</span>}
+                  metricKey="markers_out_of_range"
                 />
               </>
             ) : null
@@ -187,11 +190,13 @@ const HealthDirectionGrid: React.FC<Props> = ({
                   icon={<Scale />}
                   label="Weight"
                   value={`${latestWithings.bodyComposition.totalMass.toFixed(1)} lbs`}
+                  metricKey="weight"
                 />
                 <KpiStat
                   icon={<Percent />}
                   label="Body Fat"
                   value={`${latestWithings.bodyComposition.bodyFatPercentage.toFixed(1)}%`}
+                  metricKey="body_fat"
                 />
               </>
             ) : null
