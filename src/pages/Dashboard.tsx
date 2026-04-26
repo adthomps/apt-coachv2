@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ChevronDown, Upload } from 'lucide-react';
+import { Activity, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import PageHeader from '@/components/common/PageHeader';
@@ -11,9 +11,6 @@ import HealthCommandSummary from '@/components/dashboard/HealthCommandSummary';
 import HealthDirectionGrid from '@/components/dashboard/HealthDirectionGrid';
 import TrainingSection from '@/components/dashboard/TrainingSection';
 import { Button } from '@/components/ui/button';
-import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import {
   useSnapshots, useBloodPanels, useSchedule, useSessions,
 } from '@/hooks/use-api-queries';
