@@ -15,7 +15,10 @@ import {
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useWorkout, useExercises, usePerformanceProfiles, useAdaptiveRecommendations, useCreateSession, useUpdateSession, useSession, useAnalyzeSession } from '@/hooks/use-api-queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/hooks/use-api-queries';
 import type { SessionExerciseLog, SessionSetLog, SessionMetrics } from '@/lib/api/types';
+import { shiftScheduleForSession } from '@/lib/schedule-sync';
 import { toast } from '@/hooks/use-toast';
 
 const WorkoutStart = () => {
@@ -128,6 +131,8 @@ const WorkoutStart = () => {
     return out;
   };
 
+  const queryClient = useQueryClient();
+
   const pauseSession = async () => {
     if (!workout) return;
     setIsPausing(true);
@@ -147,7 +152,14 @@ const WorkoutStart = () => {
         });
         setSessionId(created.id);
       }
-      toast({ title: 'Session saved', description: 'Resume any time from Training → Sessions.' });
+      const shifted = await shiftScheduleForSession(workout.id, workout.name, 'paused');
+      if (shifted) queryClient.invalidateQueries({ queryKey: queryKeys.schedule });
+      toast({
+        title: 'Session saved',
+        description: shifted
+          ? 'Resume from Training → Sessions. Schedule shifted to tomorrow.'
+          : 'Resume any time from Training → Sessions.',
+      });
       navigate('/training?tab=sessions');
     } catch {
       toast({ title: 'Could not save session', variant: 'destructive' });
