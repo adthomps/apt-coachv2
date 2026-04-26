@@ -162,6 +162,7 @@ const Dashboard: React.FC = () => {
           latestPanel={latestPanel}
           bodyInsights={bodyInsights}
           panelInsights={panelInsights}
+          compare={compare}
         />
 
         {/* 3. Training */}
