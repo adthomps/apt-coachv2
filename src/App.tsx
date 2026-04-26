@@ -43,6 +43,7 @@ const App = () => (
               <Route path="/health" element={<ProtectedRoute><Health /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute>} />
+              <Route path="/user-guide" element={<ProtectedRoute><UserGuide /></ProtectedRoute>} />
 
               {/* Redirects from old routes */}
               <Route path="/exercises" element={<Navigate to="/training?tab=library" replace />} />
