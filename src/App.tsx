@@ -15,6 +15,7 @@ import Schedule from "./pages/Schedule";
 import Health from "./pages/Health";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
+import UserGuide from "./pages/UserGuide";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
