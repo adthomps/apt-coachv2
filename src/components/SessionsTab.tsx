@@ -207,7 +207,12 @@ const SessionsTab: React.FC = () => {
         <EmptyState
           icon={<Activity className="h-10 w-10" />}
           title="No sessions yet"
-          description="Start a workout from the Workouts tab to log your first session."
+          description="Start a workout to log your first session, or jump in directly from the Workouts tab."
+          action={
+            <Button onClick={openCreate} disabled={workouts.length === 0}>
+              <Plus className="mr-2 h-4 w-4" /> New Session
+            </Button>
+          }
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
