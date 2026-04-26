@@ -449,10 +449,6 @@ const ProgramsTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Create Program</Button>
-      </div>
-
       <ListToolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -462,6 +458,7 @@ const ProgramsTab: React.FC = () => {
         onFilterChange={setGoal}
         resultCount={filtered.length}
         resultLabel="programs"
+        action={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Create Program</Button>}
       />
 
       {isLoading ? (
