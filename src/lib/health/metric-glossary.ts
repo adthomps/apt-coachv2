@@ -46,7 +46,20 @@ export type MetricKey =
   | 'adherence'
   | 'streak'
   | 'markers_optimal'
-  | 'markers_out_of_range';
+  | 'markers_out_of_range'
+  // Regional DEXA
+  | 'region_arms'
+  | 'region_legs'
+  | 'region_trunk'
+  | 'region_android'
+  | 'region_gynoid'
+  // Bone density
+  | 'bone_t_score'
+  | 'bone_z_score'
+  // Trend / signals
+  | 'weight_trend'
+  | 'health_signals'
+  | 'panel_summary';
 
 export const METRIC_GLOSSARY: Record<MetricKey, MetricExplanation> = {
   weight: {
