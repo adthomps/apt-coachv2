@@ -465,6 +465,8 @@ const Health: React.FC = () => {
                           </div>
                         )}
 
+                        <MetricExplainer metricKey="weight_trend" compact title="How to read scale-to-scale changes" />
+
                         <p className="text-xs text-muted-foreground pt-1">
                           Smart-scale readings track day-to-day trends. For ground-truth body composition (regional, bone density), import a DEXA scan from Admin.
                         </p>
