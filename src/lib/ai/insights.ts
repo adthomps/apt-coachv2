@@ -16,6 +16,7 @@ import type {
 } from '@/lib/api/types';
 import { evaluateBloodPanel } from '@/lib/blood-marker-engine';
 import { getRecommendation } from '@/lib/protocol';
+import { resolveMarkerKey, type MetricKey } from '@/lib/health/metric-glossary';
 
 export type InsightCategory = 'food' | 'training' | 'schedule' | 'lifestyle';
 export type InsightSeverity = 'info' | 'attention' | 'urgent';
@@ -36,6 +37,10 @@ export interface Insight {
   rationale: string;
   evidence: InsightEvidence;
   actions?: string[];
+  /** Optional glossary key — drives the "The science" disclosure on the card. */
+  metricKey?: MetricKey;
+  /** Or pass an inline science block when no glossary key fits. */
+  science?: { what: string; why: string; focus: string[] };
 }
 
 let counter = 0;
