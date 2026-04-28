@@ -539,6 +539,10 @@ const Health: React.FC = () => {
                         <KpiStat icon={<Calendar />} label="Panel Date" value={<span className="text-lg">{format(new Date(selectedPanel.panelDate), 'MMM d, yyyy')}</span>} />
                       </div>
 
+                      <SectionCard variant="subtle">
+                        <MetricExplainer metricKey="panel_summary" compact title="How to read this panel" />
+                      </SectionCard>
+
                       <BloodPanelDetail panel={selectedPanel} />
 
                       <div id="insights">
