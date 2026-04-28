@@ -22,6 +22,8 @@ import KpiStat from '@/components/health/KpiStat';
 import RangeBar from '@/components/health/RangeBar';
 import DeltaValue from '@/components/health/DeltaValue';
 import InsightsAnchor from '@/components/health/InsightsAnchor';
+import MetricExplainer from '@/components/health/MetricExplainer';
+import type { MetricKey } from '@/lib/health/metric-glossary';
 import {
   useSnapshots, useDeleteSnapshot,
   useBloodPanels, useDeleteBloodPanel,
@@ -270,6 +272,7 @@ const Health: React.FC = () => {
                             </span>
                           </div>
                           <Progress value={(selectedScan.bodyComposition.leanMass / selectedScan.bodyComposition.totalMass) * 100} className="h-3" />
+                          <MetricExplainer metricKey="lean_mass_ratio" compact />
                         </div>
                         <div>
                           <div className="flex justify-between text-sm mb-1">
@@ -288,22 +291,53 @@ const Health: React.FC = () => {
                                   : 'average'
                             }
                           />
+                          <MetricExplainer metricKey="body_fat" compact />
                         </div>
 
                         {selectedScan.regionalData.length > 0 && (
                           <div className="pt-4 border-t border-border">
                             <h4 className="font-medium mb-3 text-foreground text-sm">Regional Breakdown</h4>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                              {selectedScan.regionalData.map((r) => (
-                                <div key={r.region} className="p-3 border border-border rounded-lg">
-                                  <h5 className="font-medium capitalize text-sm text-foreground">{r.region}</h5>
-                                  <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                                    <div className="flex justify-between"><span>Fat</span><span className="tabular-nums">{r.fatMass.toFixed(1)} lbs</span></div>
-                                    <div className="flex justify-between"><span>Lean</span><span className="tabular-nums">{r.leanMass.toFixed(1)} lbs</span></div>
-                                    <div className="flex justify-between"><span>Fat %</span><span className="tabular-nums">{r.fatPercentage.toFixed(1)}%</span></div>
+                              {selectedScan.regionalData.map((r) => {
+                                const regionKey = `region_${r.region}` as MetricKey;
+                                return (
+                                  <div key={r.region} className="p-3 border border-border rounded-lg">
+                                    <h5 className="font-medium capitalize text-sm text-foreground">{r.region}</h5>
+                                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                      <div className="flex justify-between"><span>Fat</span><span className="tabular-nums">{r.fatMass.toFixed(1)} lbs</span></div>
+                                      <div className="flex justify-between"><span>Lean</span><span className="tabular-nums">{r.leanMass.toFixed(1)} lbs</span></div>
+                                      <div className="flex justify-between"><span>Fat %</span><span className="tabular-nums">{r.fatPercentage.toFixed(1)}%</span></div>
+                                    </div>
+                                    <MetricExplainer metricKey={regionKey} compact title="About this region" />
                                   </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedScan.boneDensity && (selectedScan.boneDensity.tScore !== undefined || selectedScan.boneDensity.zScore !== undefined) && (
+                          <div className="pt-4 border-t border-border">
+                            <h4 className="font-medium mb-3 text-foreground text-sm">Bone Density</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {selectedScan.boneDensity.tScore !== undefined && (
+                                <div className="p-3 border border-border rounded-lg">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">T-score</span>
+                                    <span className="text-lg font-semibold text-foreground tabular-nums">{selectedScan.boneDensity.tScore.toFixed(1)}</span>
+                                  </div>
+                                  <MetricExplainer metricKey="bone_t_score" compact />
                                 </div>
-                              ))}
+                              )}
+                              {selectedScan.boneDensity.zScore !== undefined && (
+                                <div className="p-3 border border-border rounded-lg">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">Z-score</span>
+                                    <span className="text-lg font-semibold text-foreground tabular-nums">{selectedScan.boneDensity.zScore.toFixed(1)}</span>
+                                  </div>
+                                  <MetricExplainer metricKey="bone_z_score" compact />
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -431,6 +465,8 @@ const Health: React.FC = () => {
                           </div>
                         )}
 
+                        <MetricExplainer metricKey="weight_trend" compact title="How to read scale-to-scale changes" />
+
                         <p className="text-xs text-muted-foreground pt-1">
                           Smart-scale readings track day-to-day trends. For ground-truth body composition (regional, bone density), import a DEXA scan from Admin.
                         </p>
@@ -502,6 +538,10 @@ const Health: React.FC = () => {
                         <KpiStat icon={<AlertTriangle className="text-destructive" />} label="Out of Range" value={<span className="text-destructive">{flagged}</span>} metricKey="markers_out_of_range" />
                         <KpiStat icon={<Calendar />} label="Panel Date" value={<span className="text-lg">{format(new Date(selectedPanel.panelDate), 'MMM d, yyyy')}</span>} />
                       </div>
+
+                      <SectionCard variant="subtle">
+                        <MetricExplainer metricKey="panel_summary" compact title="How to read this panel" />
+                      </SectionCard>
 
                       <BloodPanelDetail panel={selectedPanel} />
 

@@ -6,8 +6,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import SectionCard from '@/components/common/SectionCard';
 import StatusBadge from '@/components/common/StatusBadge';
 import KpiStat from '@/components/health/KpiStat';
+import MetricExplainer from '@/components/health/MetricExplainer';
 import type { Snapshot, BloodPanel, ProgressCompare } from '@/lib/api/types';
 import type { Insight } from '@/lib/ai/insights';
+import type { MetricKey } from '@/lib/health/metric-glossary';
 
 type Status = 'optimal' | 'average' | 'outOfRange' | 'muted';
 
@@ -35,11 +37,12 @@ interface SourceCardProps {
   meta: string | null;
   kpis: React.ReactNode;
   priority: string | null;
+  priorityKey?: MetricKey;
   food: string | null;
 }
 
 /** One source card. Header (title + status), KPI strip (shared KpiStat), priority + food, footer link. */
-const SourceCard: React.FC<SourceCardProps> = ({ title, icon, status, meta, kpis, priority, food }) => (
+const SourceCard: React.FC<SourceCardProps> = ({ title, icon, status, meta, kpis, priority, priorityKey, food }) => (
   <Card className="apt-hover-lift transition-shadow flex flex-col">
     <CardContent className="pt-5 space-y-4 flex-1 flex flex-col">
       {/* Header */}
@@ -60,6 +63,7 @@ const SourceCard: React.FC<SourceCardProps> = ({ title, icon, status, meta, kpis
           <div>
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Priority Action</p>
             <p className="text-sm text-foreground leading-snug">{priority}</p>
+            {priorityKey && <MetricExplainer metricKey={priorityKey} compact title="Why this is the priority" />}
           </div>
         )}
         {food && (
@@ -118,6 +122,7 @@ const HealthDirectionGrid: React.FC<Props> = ({
           status={dexaStatus}
           meta={latestDexa ? format(new Date(latestDexa.scanDate), 'MMM d, yyyy') : null}
           priority={dexaTopTraining?.title ?? (latestDexa ? null : 'Import a DEXA scan to set a baseline.')}
+          priorityKey={dexaTopTraining?.metricKey}
           food={dexaTopFood?.title ?? null}
           kpis={
             latestDexa ? (
@@ -155,6 +160,7 @@ const HealthDirectionGrid: React.FC<Props> = ({
               ? (rythmTopMarker?.title ? `Address ${rythmTopMarker.title}` : 'All markers in range — keep current habits.')
               : 'Import a blood panel to surface marker insights.'
           }
+          priorityKey={rythmTopMarker?.metricKey}
           food={rythmTopMarker?.actions?.[0] ?? null}
           kpis={
             latestPanel ? (

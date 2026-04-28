@@ -46,7 +46,20 @@ export type MetricKey =
   | 'adherence'
   | 'streak'
   | 'markers_optimal'
-  | 'markers_out_of_range';
+  | 'markers_out_of_range'
+  // Regional DEXA
+  | 'region_arms'
+  | 'region_legs'
+  | 'region_trunk'
+  | 'region_android'
+  | 'region_gynoid'
+  // Bone density
+  | 'bone_t_score'
+  | 'bone_z_score'
+  // Trend / signals
+  | 'weight_trend'
+  | 'health_signals'
+  | 'panel_summary';
 
 export const METRIC_GLOSSARY: Record<MetricKey, MetricExplanation> = {
   weight: {
@@ -172,6 +185,62 @@ export const METRIC_GLOSSARY: Record<MetricKey, MetricExplanation> = {
     what: 'Blood markers currently outside the optimal reference range.',
     why: 'These are the highest-leverage targets for the next training and nutrition block.',
     focus: ['Address one or two markers at a time', 'Re-test 8–12 weeks after changes'],
+  },
+
+  region_arms: {
+    what: 'Combined fat, lean, and bone mass in both arms (DEXA region).',
+    why: 'Arm lean mass is a quick proxy for upper-body training response and protein adequacy.',
+    focus: ['Pull and press volume 2–3x/week', 'Hit 0.8–1.0 g protein per lb body weight'],
+  },
+  region_legs: {
+    what: 'Combined fat, lean, and bone mass in both legs (DEXA region).',
+    why: 'Lower-body lean mass is the largest contributor to total lean mass and resting metabolic rate.',
+    focus: ['Squat / hinge / lunge patterns weekly', 'Walk after meals to support insulin sensitivity'],
+  },
+  region_trunk: {
+    what: 'Torso region — chest, back, and abdomen (DEXA region).',
+    why: 'Largest single fat depot and where most fat-mass change shows up first during a cut or surplus.',
+    focus: ['Track trunk fat trend across scans, not single readings', 'Combine resistance training with modest deficit'],
+  },
+  region_android: {
+    what: 'Abdominal region around the navel — a subset of trunk (DEXA region).',
+    why: 'Higher android fat is the strongest body-comp marker of cardiometabolic risk. Android-to-gynoid ratio matters more than absolute pounds.',
+    focus: ['Reduce refined carbs and alcohol', 'Add zone-2 cardio 2–3x/week', 'Sleep 7–9 hours'],
+    range: 'Android:Gynoid < 1.0 (men), < 0.8 (women)',
+  },
+  region_gynoid: {
+    what: 'Hip and upper-thigh region (DEXA region).',
+    why: 'Gynoid fat is metabolically protective. The android:gynoid ratio is what drives risk, not gynoid alone.',
+    focus: ['No need to "spot reduce" — train the legs hard for lean mass'],
+  },
+
+  bone_t_score: {
+    what: 'Bone density compared to a healthy young adult, in standard deviations.',
+    why: 'WHO standard for diagnosing osteopenia and osteoporosis. Drives long-term fracture risk.',
+    focus: ['Resistance training 2–4x/week (impact + heavy load)', 'Adequate vitamin D (40–60 ng/mL) and calcium', 'Discuss with your doctor if T-score ≤ −1.0'],
+    range: '≥ −1.0 normal · −1.0 to −2.5 osteopenia · ≤ −2.5 osteoporosis',
+  },
+  bone_z_score: {
+    what: 'Bone density compared to peers of the same age and sex.',
+    why: 'Useful when T-score is borderline — flags whether bone mass is unusual for your age group.',
+    focus: ['Z-score ≤ −2.0 warrants a workup with your doctor'],
+    range: '≥ −2.0 expected for age',
+  },
+
+  weight_trend: {
+    what: 'How to read scale-to-scale weight changes.',
+    why: 'Daily weight swings are mostly water, glycogen, and sodium — not fat. A 1–3 lb day-to-day swing is normal noise.',
+    focus: ['Compare 7-day averages, not single readings', 'Weigh same time of day, same conditions', 'Expect 0.5–1.0 lb/week of real change in a moderate cut or surplus'],
+  },
+  health_signals: {
+    what: 'How the dashboard chips above are computed.',
+    why: 'Chips surface only meaningful shifts so the headline does not get noisy.',
+    focus: ['Lean / Fat chips appear when change is ≥ 0.5 lb between scans', 'Marker chip counts blood markers currently outside the optimal range', '"Hold steady" means no signal crossed threshold this period'],
+  },
+  panel_summary: {
+    what: 'How to read the optimal vs out-of-range counts.',
+    why: '"Optimal" means inside the athletic-healthy band, not just normal. Out-of-range markers are the highest-leverage targets for the next 8–12 weeks.',
+    focus: ['Address one or two markers at a time', 'Re-test 8–12 weeks after changes', 'Discuss persistent flags with your doctor'],
   },
 };
 

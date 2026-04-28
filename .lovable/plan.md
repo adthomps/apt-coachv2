@@ -1,83 +1,63 @@
 ## Goal
-Make all three Health tabs (DEXA, Withings, Blood Panels) feel like one product. Same layout shell, same primitives for "stat at a glance", "change vs prior", "range vs reference", and "insights". Different data, identical scaffolding and reading order.
 
-## Shared layout contract (applied to all 3 tabs)
-```
-┌─────────────────────────────────────────────────────────────┐
-│ [PageHeader]                                                │
-│ [Tabs: DEXA · Withings · Blood Panels]                      │
-├──────────────┬──────────────────────────────────────────────┤
-│ Panel        │ 1. Stats-at-a-glance KPI strip (4 cards)     │
-│ History      │    + "Jump to insights ↓" quick link          │
-│ (left rail,  │ 2. Body Composition / Range Visualization     │
-│  selectable, │    (tab-specific but same component shape)    │
-│  delete)     │ 3. AI Insights (anchor: #insights)            │
-│              │ 4. Detail breakdown (regional / markers / …)  │
-└──────────────┴──────────────────────────────────────────────┘
-```
-- Left rail: always `lg:col-span-1`, shows date, summary line, status pill, delete button. Selecting an item drives the right pane. Withings currently has no left rail — we add one.
-- Right pane: always `lg:col-span-3`, fixed reading order (KPI → composition/visual → insights → detail).
-- Empty states unchanged in shape but adopt the same "Add / Import" CTA pattern.
+Extend the science-grounded "what / why / focus" pattern (already wired into `KpiStat` + `MetricExplainer` + `metric-glossary.ts`) to the remaining health surfaces where users currently see numbers without context: **regional DEXA breakdown, bone density, the body-fat range bar, recent Withings reading rows, AI insight cards, the dashboard headline, and the dashboard summary signal chips**. Also add a small set of glossary entries those surfaces need, plus an optional `evidence` link on each `Insight` so insight cards can carry their own expanded context.
 
-## New shared primitives (`src/components/health/`)
-1. **`HealthHistoryRail.tsx`** — selectable date list with status pill + delete. Drives DEXA, Withings, and Blood Panels rails (today they are 3 copies of the same JSX).
-   - Props: `items: { id, date, summaryLine, badge?, onDelete }[]`, `selectedId`, `onSelect`.
-2. **`KpiStat.tsx`** — single KPI card: icon, label, value, optional `delta` with consistent up/down/neutral color rules (invertible for "lower is better"). Replaces the 4 ad-hoc Card blocks duplicated in DEXA + Withings.
-3. **`RangeBar.tsx`** (extract from `BloodPanelDetail.tsx`) — generic "value within reference range" bar. Reused by Blood Panel markers and a new "fat % vs healthy band" bar on DEXA/Withings.
-4. **`DeltaValue.tsx`** — tiny inline component: `+1.2 lbs` / `-0.4%` with consistent coloring + invert flag. Used everywhere a change is shown.
-5. **`InsightsAnchor.tsx`** — small "Jump to AI insights ↓" link that scrolls to `#insights`. Same affordance on every tab.
+## What changes (user-visible)
 
-No new design tokens; uses existing `text-success` / `text-destructive` / `text-muted-foreground` and `SectionCard` variants per APT.
+1. **DEXA Body Composition card** (Health → Scans)
+   - Add a "What this means" disclosure under the **Lean Mass Ratio** progress bar (new glossary key reuses `lean_mass_ratio`).
+   - Add a "What this means" disclosure under the **Body Fat % vs healthy range** RangeBar (reuses `body_fat`).
+   - Wrap each **Regional Breakdown** tile in a hover/expand affordance using `MetricExplainer` for new keys: `region_arms`, `region_legs`, `region_trunk`, `region_android`, `region_gynoid`. Each entry explains what the region represents (e.g. android = abdominal, strongest cardiometabolic signal) and what to focus on.
+   - If `boneDensity` is present, render a small "Bone Density" subsection (T-score / Z-score) with explainer keys `bone_t_score`, `bone_z_score`.
 
-## Per-tab changes
+2. **Withings → Recent Readings** (Health → Withings)
+   - Add a single shared `MetricExplainer` below the list explaining how to read scale-to-scale deltas (noise band, hydration effect, weekly trend > daily) using a new `weight_trend` key. One disclosure per section, not per row.
 
-### DEXA Scans (`scans` tab)
-- Keep current 1/3 + 3/3 split; swap left rail for `HealthHistoryRail`, swap 4 KPI Cards for `KpiStat`.
-- Add `InsightsAnchor` above KPIs.
-- Reorder: KPI strip → **Body Composition** (Lean/Fat ratios + Regional) → **AI Insights** (`id="insights"`) → no change to bottom.
-  - Currently AI Insights sits between KPIs and Body Composition; move below body composition so the visual block stays adjacent to the numbers it explains. Insights becomes the "what to do" close to the bottom on every tab.
+3. **Blood Panels**
+   - Already covered per-marker via `BloodPanelDetail`. Add a top-of-panel `MetricExplainer` for the "Optimal vs Out of Range" framing using existing `markers_optimal` / `markers_out_of_range` keys, surfaced as one combined "How to read this panel" disclosure on the Blood tab summary strip.
 
-### Withings (`withings` tab) — biggest change
-- Introduce left **Reading History** rail (replaces the full-width "Reading History" list). Same component as DEXA.
-- Right pane gets the standard order:
-  1. KPI strip (already present, swap to `KpiStat`).
-  2. **Trend Visualization** card — reuse `RangeBar` to show body-fat % vs typical healthy band, plus simple sparkline-style delta rows for last 5 readings (no chart library — bars only, matches existing aesthetic).
-  3. **AI Insights** — wire `getBodyScanInsights(selectedReading, comparisonVsPrev)` so Withings finally gets insights (today it has none). Comparison built in-page from the next item in the sorted list.
-  4. Notes block if present.
-- Remove the trailing footnote about "import a DEXA scan" — relocate as a one-line muted hint inside the Trend Visualization card.
+4. **AI Insights cards** (`AIInsightsPanel`, used on all 3 health tabs and dashboard)
+   - Each insight already carries `evidence`. Extend `Insight` with optional `metricKey?: MetricKey` and `science?: { what: string; why: string; focus: string[] }`.
+   - Render an inline `MetricExplainer` inside each insight card titled "The science" — pulled from the insight's `metricKey` (preferred) or inline `science` block. Keeps cards compact by default, expandable on demand.
+   - Update `getBodyScanInsights` and `getBloodPanelInsights` in `src/lib/ai/insights.ts` to populate `metricKey` where the source metric is known (body_fat, lean_mass, fat_mass, and the matched blood marker).
 
-### Blood Panels (`blood` tab)
-- Already matches the layout; just swap to `HealthHistoryRail`.
-- Add a top **KPI strip** using `KpiStat` so this tab matches the others at-a-glance:
-  1. Total markers
-  2. Optimal count (success tone)
-  3. Out of Range count (destructive tone)
-  4. Panel date
-  (These already exist inside `BloodPanelDetail` as a sub-summary — promote them to the top, remove the duplicate inside `BloodPanelDetail`.)
-- Add `InsightsAnchor` above KPIs. Reorder: KPI → Marker categories (BloodPanelDetail body) → AI Insights (`id="insights"`) at the bottom.
-- `BloodPanelDetail.tsx` updated to drop its internal 4-card summary and to use the shared `RangeBar`.
+5. **Dashboard — HealthCommandSummary**
+   - The "Active Health Signals" chip row gets a single "How to read these signals" disclosure underneath it, explaining the lean/fat/marker thresholds the chips use. New glossary key `health_signals`.
+   - The "Headline" insight (if present) also picks up the per-card "The science" disclosure from change #4.
 
-## Files affected
-- **New**: `src/components/health/HealthHistoryRail.tsx`, `KpiStat.tsx`, `RangeBar.tsx`, `DeltaValue.tsx`, `InsightsAnchor.tsx`.
-- **Edited**: `src/pages/Health.tsx` (all 3 tab bodies), `src/components/BloodPanelDetail.tsx` (extract RangeBar, drop top summary cards).
-- No type changes, no API changes, no mock-data changes.
+6. **Dashboard — HealthDirectionGrid**
+   - Already uses `KpiStat` with `metricKey`, so explainers are present. Add a "Priority Action" small disclosure that explains *why* the priority is what it is, using the headline insight's `metricKey` when available (no new component — reuses `MetricExplainer` with `compact`).
 
-## States covered
-Loading (existing), empty (existing per-tab CTAs preserved), single-item (delta hidden), selected-but-deleted (existing fallback to first item), no-comparison-available (delta hidden, KPI still renders).
+## New / extended glossary entries
+
+Add to `src/lib/health/metric-glossary.ts`:
+- `region_arms`, `region_legs`, `region_trunk`, `region_android`, `region_gynoid` — what each DEXA region represents, why android-vs-gynoid ratio matters, suggested focus (training emphasis, posture, cardio for android fat).
+- `bone_t_score`, `bone_z_score` — definitions, WHO thresholds (T ≥ −1 normal, −1 to −2.5 osteopenia, ≤ −2.5 osteoporosis), focus (resistance training, vitamin D, calcium, impact loading).
+- `weight_trend` — how to interpret day-to-day scale fluctuations (hydration, glycogen, sodium), why weekly trend matters.
+- `health_signals` — explains the dashboard chip thresholds (≥ 0.5 lb lean/fat change, marker out-of-range counts).
+
+All copy stays grounded — short, cites typical reference bands, no hyperbole.
+
+## Files touched
+
+| File | Change |
+|------|--------|
+| `src/lib/health/metric-glossary.ts` | Add new `MetricKey` union members and entries listed above. Extend `resolveMarkerKey` if useful for new blood markers. |
+| `src/lib/ai/insights.ts` | Extend `Insight` interface with optional `metricKey` and `science`. Populate `metricKey` in body scan and blood panel insight builders. |
+| `src/components/AIInsightsPanel.tsx` | Render `MetricExplainer` ("The science") inside each card when `metricKey` or `science` is present. |
+| `src/pages/Health.tsx` | Add explainers to Lean Mass Ratio bar, Body Fat range bar, Regional Breakdown tiles, optional Bone Density subsection, Withings recent-readings footer, and Blood tab summary strip. |
+| `src/components/dashboard/HealthCommandSummary.tsx` | Add "How to read these signals" disclosure under the chip row. |
+| `src/components/dashboard/HealthDirectionGrid.tsx` | Wrap Priority Action text in `MetricExplainer` driven by the headline insight's `metricKey`. |
+
+## Out of scope (call out for later)
+
+- Charts / sparklines for blood marker trends across panels.
+- Per-region radar/heatmap visualization of DEXA regional changes.
+- LLM-grounded science copy (we stay deterministic and cite the glossary today).
 
 ## APT principles applied
-- **Reusable systems over one-off screens**: 5 small primitives replace 3 parallel JSX trees.
-- **Calm, structured, non-marketing**: same reading order across tabs lowers cognitive load.
-- **Tokens over raw colors**: deltas standardized via `DeltaValue` using semantic tokens.
-- **Presentational UI, logic at the page**: comparisons + insight selection stay in `Health.tsx`; primitives are dumb.
 
-## Validation
-- `tsc` clean.
-- Manual check on `/health`: switch between all 3 tabs, confirm identical scaffold; select different items in each rail; verify delete flow; verify empty state on a tab with zero items; verify single-item case (no delta).
-- Confirm the "Jump to insights ↓" anchor scrolls to the insights block on each tab.
-
-## Out of scope (would be follow-ups)
-- DEXA sub-tabs / Bone density / Compare-window picker (Phase 3 of the prior plan).
-- Blood Signal Summary cards (Out of Range / Improved / Worsened deltas vs prior panel).
-- Withings device sub-views (BPM, BeamO, U-Scan).
-These build cleanly on the primitives introduced here.
+- **Reusable systems over one-offs**: every new explanation goes through `MetricExplainer` + the glossary, no bespoke copy in components.
+- **Grounded, no hyperbole**: every disclosure is tied to a glossary entry with a typical range; insights still require evidence.
+- **Calm, structured UI**: explanations are collapsed by default — page weight unchanged for users who don't want detail.
+- **Dark-first, shared tokens**: no new visual treatments introduced.

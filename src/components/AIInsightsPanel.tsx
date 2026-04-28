@@ -3,6 +3,7 @@ import { Lightbulb, Utensils, Dumbbell, Calendar, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import SectionCard from '@/components/common/SectionCard';
 import EmptyState from '@/components/common/EmptyState';
+import MetricExplainer from '@/components/health/MetricExplainer';
 import type { Insight, InsightCategory, InsightSeverity } from '@/lib/ai/insights';
 import { format } from 'date-fns';
 
@@ -94,6 +95,15 @@ const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
               )}
               <span className="ml-2 italic">({SEVERITY_LABEL[ins.severity]})</span>
             </div>
+
+            {(ins.metricKey || ins.science) && (
+              <MetricExplainer
+                metricKey={ins.metricKey}
+                explanation={ins.science}
+                title="The science"
+                compact
+              />
+            )}
           </div>
         ))}
       </div>
