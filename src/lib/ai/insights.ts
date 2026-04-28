@@ -152,6 +152,7 @@ export function getBloodPanelInsights(panel: BloodPanel): Insight[] {
           reference: marker.referenceRange,
           date: marker.time,
         },
+        metricKey: resolveMarkerKey(marker.marker) ?? undefined,
       };
     })
     .filter((i): i is Insight => i !== null);
