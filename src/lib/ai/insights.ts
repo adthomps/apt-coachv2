@@ -98,10 +98,15 @@ export function getBodyScanInsights(
           value: `${snapshot.bodyComposition.bodyFatPercentage.toFixed(1)}% body fat, ${snapshot.bodyComposition.leanMass.toFixed(1)} lbs lean`,
           date: snapshot.scanDate,
         },
+    metricKey: compare ? 'lean_mass' : 'body_fat',
   });
 
   // Food suggestions — each tied to the snapshot.
   for (const fs of rec.foodSuggestions) {
+    const fsKey: MetricKey | undefined =
+      fs.category === 'protein' ? 'lean_mass'
+      : fs.category === 'fat' ? 'body_fat'
+      : undefined;
     insights.push({
       id: nextId(),
       category: 'food',
@@ -114,6 +119,7 @@ export function getBodyScanInsights(
         value: `${snapshot.bodyComposition.bodyFatPercentage.toFixed(1)}% BF, ${snapshot.bodyComposition.leanMass.toFixed(1)} lbs lean`,
         date: snapshot.scanDate,
       },
+      metricKey: fsKey,
     });
   }
 
