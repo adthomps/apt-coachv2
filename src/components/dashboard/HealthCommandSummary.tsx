@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import SectionCard from '@/components/common/SectionCard';
 import DeltaValue from '@/components/health/DeltaValue';
+import MetricExplainer from '@/components/health/MetricExplainer';
 import type { Insight } from '@/lib/ai/insights';
 import type { Snapshot, BloodPanel, ProgressCompare } from '@/lib/api/types';
 
@@ -116,6 +117,14 @@ const HealthCommandSummary: React.FC<Props> = ({
             <span className="font-mono text-foreground">{headline.evidence.value}</span>
             {headline.evidence.date && <> · {format(new Date(headline.evidence.date), 'MMM d, yyyy')}</>}
           </p>
+          {(headline.metricKey || headline.science) && (
+            <MetricExplainer
+              metricKey={headline.metricKey}
+              explanation={headline.science}
+              title="The science"
+              compact
+            />
+          )}
         </div>
       )}
 
@@ -126,8 +135,9 @@ const HealthCommandSummary: React.FC<Props> = ({
             Active Signals
           </h4>
           <div className="flex flex-wrap gap-1.5 mb-3">{signals}</div>
+          <MetricExplainer metricKey="health_signals" compact title="How to read these signals" />
           {inputs.length > 0 && (
-            <div className="text-[11px] text-muted-foreground space-y-0.5">
+            <div className="text-[11px] text-muted-foreground space-y-0.5 mt-3">
               <p className="font-medium text-foreground mb-1">Current inputs</p>
               {inputs.map((i) => (
                 <div key={i.label} className="flex justify-between">
