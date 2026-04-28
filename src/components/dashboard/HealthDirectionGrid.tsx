@@ -122,6 +122,7 @@ const HealthDirectionGrid: React.FC<Props> = ({
           status={dexaStatus}
           meta={latestDexa ? format(new Date(latestDexa.scanDate), 'MMM d, yyyy') : null}
           priority={dexaTopTraining?.title ?? (latestDexa ? null : 'Import a DEXA scan to set a baseline.')}
+          priorityKey={dexaTopTraining?.metricKey}
           food={dexaTopFood?.title ?? null}
           kpis={
             latestDexa ? (
@@ -159,6 +160,7 @@ const HealthDirectionGrid: React.FC<Props> = ({
               ? (rythmTopMarker?.title ? `Address ${rythmTopMarker.title}` : 'All markers in range — keep current habits.')
               : 'Import a blood panel to surface marker insights.'
           }
+          priorityKey={rythmTopMarker?.metricKey}
           food={rythmTopMarker?.actions?.[0] ?? null}
           kpis={
             latestPanel ? (
