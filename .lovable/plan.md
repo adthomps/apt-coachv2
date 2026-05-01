@@ -1,63 +1,118 @@
-## Goal
 
-Extend the science-grounded "what / why / focus" pattern (already wired into `KpiStat` + `MetricExplainer` + `metric-glossary.ts`) to the remaining health surfaces where users currently see numbers without context: **regional DEXA breakdown, bone density, the body-fat range bar, recent Withings reading rows, AI insight cards, the dashboard headline, and the dashboard summary signal chips**. Also add a small set of glossary entries those surfaces need, plus an optional `evidence` link on each `Insight` so insight cards can carry their own expanded context.
+# Daily System Page — "/today"
 
-## What changes (user-visible)
+A single day-at-a-glance hub combining today's training, macro logging, nutrition targets (derived from body composition), and health signals.
 
-1. **DEXA Body Composition card** (Health → Scans)
-   - Add a "What this means" disclosure under the **Lean Mass Ratio** progress bar (new glossary key reuses `lean_mass_ratio`).
-   - Add a "What this means" disclosure under the **Body Fat % vs healthy range** RangeBar (reuses `body_fat`).
-   - Wrap each **Regional Breakdown** tile in a hover/expand affordance using `MetricExplainer` for new keys: `region_arms`, `region_legs`, `region_trunk`, `region_android`, `region_gynoid`. Each entry explains what the region represents (e.g. android = abdominal, strongest cardiometabolic signal) and what to focus on.
-   - If `boneDensity` is present, render a small "Bone Density" subsection (T-score / Z-score) with explainer keys `bone_t_score`, `bone_z_score`.
+---
 
-2. **Withings → Recent Readings** (Health → Withings)
-   - Add a single shared `MetricExplainer` below the list explaining how to read scale-to-scale deltas (noise band, hydration effect, weekly trend > daily) using a new `weight_trend` key. One disclosure per section, not per row.
+## 1. New route: `/today`
 
-3. **Blood Panels**
-   - Already covered per-marker via `BloodPanelDetail`. Add a top-of-panel `MetricExplainer` for the "Optimal vs Out of Range" framing using existing `markers_optimal` / `markers_out_of_range` keys, surfaced as one combined "How to read this panel" disclosure on the Blood tab summary strip.
+Add to App.tsx and nav. This becomes the daily operational page — Dashboard stays as the strategic overview.
 
-4. **AI Insights cards** (`AIInsightsPanel`, used on all 3 health tabs and dashboard)
-   - Each insight already carries `evidence`. Extend `Insight` with optional `metricKey?: MetricKey` and `science?: { what: string; why: string; focus: string[] }`.
-   - Render an inline `MetricExplainer` inside each insight card titled "The science" — pulled from the insight's `metricKey` (preferred) or inline `science` block. Keeps cards compact by default, expandable on demand.
-   - Update `getBodyScanInsights` and `getBloodPanelInsights` in `src/lib/ai/insights.ts` to populate `metricKey` where the source metric is known (body_fat, lean_mass, fat_mass, and the matched blood marker).
+## 2. Domain types (`src/lib/api/types.ts`)
 
-5. **Dashboard — HealthCommandSummary**
-   - The "Active Health Signals" chip row gets a single "How to read these signals" disclosure underneath it, explaining the lean/fat/marker thresholds the chips use. New glossary key `health_signals`.
-   - The "Headline" insight (if present) also picks up the per-card "The science" disclosure from change #4.
+```text
+MealEntry {
+  id, label (e.g. "Breakfast"), protein, carbs, fat, calories, notes?, timestamp
+}
 
-6. **Dashboard — HealthDirectionGrid**
-   - Already uses `KpiStat` with `metricKey`, so explainers are present. Add a "Priority Action" small disclosure that explains *why* the priority is what it is, using the headline insight's `metricKey` when available (no new component — reuses `MetricExplainer` with `compact`).
+DailyLog {
+  id, date (YYYY-MM-DD),
+  meals: MealEntry[],
+  bodyWeight?: number (lbs),
+  notes?: string
+}
 
-## New / extended glossary entries
+NutritionTargets {
+  calories, protein, carbs, fat  — all numbers
+  source: 'protocol' | 'custom'
+}
+```
 
-Add to `src/lib/health/metric-glossary.ts`:
-- `region_arms`, `region_legs`, `region_trunk`, `region_android`, `region_gynoid` — what each DEXA region represents, why android-vs-gynoid ratio matters, suggested focus (training emphasis, posture, cardio for android fat).
-- `bone_t_score`, `bone_z_score` — definitions, WHO thresholds (T ≥ −1 normal, −1 to −2.5 osteopenia, ≤ −2.5 osteoporosis), focus (resistance training, vitamin D, calcium, impact loading).
-- `weight_trend` — how to interpret day-to-day scale fluctuations (hydration, glycogen, sodium), why weekly trend matters.
-- `health_signals` — explains the dashboard chip thresholds (≥ 0.5 lb lean/fat change, marker out-of-range counts).
+## 3. Nutrition target engine (`src/lib/nutrition-targets.ts`)
 
-All copy stays grounded — short, cites typical reference bands, no hyperbole.
+Derives daily macro targets from the latest Snapshot + Protocol logic:
+- **Protein**: 1g per lb lean mass (already in protocol.ts)
+- **Calories**: estimated TDEE from lean mass × activity multiplier, then adjusted for current goal (surplus/deficit based on fat-mass trend from ProgressCompare)
+- **Carbs/Fat**: remaining calories split based on body fat % (lower BF% → higher carb ratio)
 
-## Files touched
+Returns `NutritionTargets` with the computed values and reasoning strings.
 
-| File | Change |
-|------|--------|
-| `src/lib/health/metric-glossary.ts` | Add new `MetricKey` union members and entries listed above. Extend `resolveMarkerKey` if useful for new blood markers. |
-| `src/lib/ai/insights.ts` | Extend `Insight` interface with optional `metricKey` and `science`. Populate `metricKey` in body scan and blood panel insight builders. |
-| `src/components/AIInsightsPanel.tsx` | Render `MetricExplainer` ("The science") inside each card when `metricKey` or `science` is present. |
-| `src/pages/Health.tsx` | Add explainers to Lean Mass Ratio bar, Body Fat range bar, Regional Breakdown tiles, optional Bone Density subsection, Withings recent-readings footer, and Blood tab summary strip. |
-| `src/components/dashboard/HealthCommandSummary.tsx` | Add "How to read these signals" disclosure under the chip row. |
-| `src/components/dashboard/HealthDirectionGrid.tsx` | Wrap Priority Action text in `MetricExplainer` driven by the headline insight's `metricKey`. |
+## 4. Mock API layer (`src/lib/api/client.ts`)
 
-## Out of scope (call out for later)
+Add `dailyLogApi`:
+- `getByDate(date)` — returns or creates a DailyLog
+- `addMeal(date, meal)` — appends a MealEntry
+- `updateMeal(date, mealId, partial)` — edits a meal
+- `deleteMeal(date, mealId)` — removes a meal
+- `updateWeight(date, weight)` — logs morning weight
 
-- Charts / sparklines for blood marker trends across panels.
-- Per-region radar/heatmap visualization of DEXA regional changes.
-- LLM-grounded science copy (we stay deterministic and cite the glossary today).
+Backed by in-memory mock store (same pattern as existing APIs).
 
-## APT principles applied
+## 5. React Query hooks (`src/hooks/use-api-queries.ts`)
 
-- **Reusable systems over one-offs**: every new explanation goes through `MetricExplainer` + the glossary, no bespoke copy in components.
-- **Grounded, no hyperbole**: every disclosure is tied to a glossary entry with a typical range; insights still require evidence.
-- **Calm, structured UI**: explanations are collapsed by default — page weight unchanged for users who don't want detail.
-- **Dark-first, shared tokens**: no new visual treatments introduced.
+Add `useDailyLog(date)`, `useAddMeal`, `useUpdateMeal`, `useDeleteMeal`, `useLogWeight` mutations with optimistic updates.
+
+## 6. Page layout: `src/pages/Today.tsx`
+
+Top-to-bottom sections using existing `SectionCard`, `KpiStat`, `DeltaValue`, `MetricExplainer`:
+
+### A. Header
+- "Today — [Day, Month Date]"
+- Morning weight input (single inline field, logs on blur/enter)
+
+### B. Nutrition Summary Bar
+- Four `KpiStat` tiles: Calories, Protein, Carbs, Fat
+- Each shows consumed / target with a progress indicator
+- Protein target auto-derived from lean mass; calories from the nutrition engine
+- `MetricExplainer` disclosure: "Why this target" — explains the body-comp derivation
+
+### C. Meal Log
+- Collapsible meal slots: Breakfast, Lunch, Dinner, Snacks
+- Each meal: quick-add row with protein/carbs/fat/cal fields + optional label
+- Running subtotals per meal
+- Add/edit/delete with `DeleteConfirmDialog`
+
+### D. Today's Training
+- If a scheduled workout exists: show workout name, estimated duration, "Start" button (links to `/workouts/:id/start`)
+- If completed: show session summary (sets completed, duration, RPE)
+- If rest day: show rest-day messaging
+
+### E. Daily Signals (compact)
+- Pull top 2-3 health signals from `HealthCommandSummary` logic
+- Body-comp-aware nudges from the nutrition engine (e.g. "You're 40g short on protein")
+
+## 7. Components
+
+| Component | Location | Purpose |
+|---|---|---|
+| `NutritionBar` | `src/components/daily/NutritionBar.tsx` | Four KPI tiles with progress rings |
+| `MealCard` | `src/components/daily/MealCard.tsx` | Collapsible meal with macro entry rows |
+| `MealEntryRow` | `src/components/daily/MealEntryRow.tsx` | Inline form: label + P/C/F/cal inputs |
+| `DailyTrainingCard` | `src/components/daily/DailyTrainingCard.tsx` | Today's workout status |
+| `DailySignals` | `src/components/daily/DailySignals.tsx` | Compact health nudges |
+
+All components reuse `SectionCard`, `KpiStat`, `DeltaValue`, `MetricExplainer` — no new design primitives.
+
+## 8. Navigation
+
+Add "Today" link to nav (Layout.tsx), placed first before Dashboard. Icon: `CalendarCheck` or `Sun` from lucide.
+
+## 9. Files affected
+
+- **New**: `src/pages/Today.tsx`, `src/lib/nutrition-targets.ts`, `src/components/daily/NutritionBar.tsx`, `MealCard.tsx`, `MealEntryRow.tsx`, `DailyTrainingCard.tsx`, `DailySignals.tsx`
+- **Modified**: `src/lib/api/types.ts` (new types), `src/lib/api/client.ts` (dailyLogApi), `src/hooks/use-api-queries.ts` (new hooks), `src/App.tsx` (route), `src/components/Layout.tsx` (nav link)
+
+## 10. What this does NOT include
+
+- No food database / search / barcode scanning (macro-only as chosen)
+- No persistent backend — stays in mock API layer consistent with current architecture
+- No meal planning or recipe features
+- No calorie counting from external APIs
+
+## Validation
+
+- Type-check passes
+- Page renders with mock data showing nutrition targets derived from latest snapshot
+- Meal CRUD works (add, edit, delete)
+- Targets update when snapshot data changes
