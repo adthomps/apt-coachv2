@@ -7,8 +7,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   exerciseApi, workoutApi, programApi, snapshotApi,
   scheduleApi, sessionApi, performanceApi, adaptiveApi, importApi, bloodPanelApi,
+  dailyLogApi,
 } from '@/lib/api';
-import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel } from '@/lib/api/types';
+import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot } from '@/lib/api/types';
 
 // ============ Query Keys ============
 
