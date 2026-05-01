@@ -26,6 +26,7 @@ export const queryKeys = {
   adaptiveRecommendations: ['adaptiveRecommendations'] as const,
   importJobs: ['importJobs'] as const,
   bloodPanels: ['bloodPanels'] as const,
+  dailyLog: (date: string) => ['dailyLog', date] as const,
 };
 
 // ============ Exercise Hooks ============
