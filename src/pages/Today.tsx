@@ -121,13 +121,12 @@ const Today: React.FC = () => {
           <NutritionBar consumed={consumed} targets={targets} />
           <div className="mt-2">
             <MetricExplainer
-              metricKey="weight_trend"
+              title="How your targets are calculated"
               compact
-              overrideContent={{
-                title: 'How your targets are calculated',
+              explanation={{
                 what: targets.reasoning,
                 why: 'Targets are derived from your latest DEXA scan and body composition trends.',
-                focus: 'Hit your protein target first — it\'s the most important macro for body recomposition.',
+                focus: ['Hit your protein target first — it\'s the most important macro for body recomposition.'],
               }}
             />
           </div>
