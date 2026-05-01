@@ -15,6 +15,7 @@ import type {
   ExercisePerformanceProfile,
   AdaptiveRecommendation,
   BloodPanel,
+  DailyLog, MealEntry, MealSlot,
 } from './types';
 import {
   mockExercises, mockWorkouts, mockPrograms, mockSnapshots, mockImportJobs,
