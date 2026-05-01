@@ -324,3 +324,39 @@ export function useAnalyzeBloodPanel() {
     },
   });
 }
+
+// ============ Daily Log Hooks ============
+
+export function useDailyLog(date: string) {
+  return useQuery({
+    queryKey: queryKeys.dailyLog(date),
+    queryFn: () => dailyLogApi.getByDate(date),
+  });
+}
+
+export function useAddMeal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, slot, entry }: { date: string; slot: MealSlot; entry: Omit<MealEntry, 'id' | 'timestamp'> }) =>
+      dailyLogApi.addMeal(date, slot, entry),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
+export function useDeleteMeal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, slot, mealId }: { date: string; slot: MealSlot; mealId: string }) =>
+      dailyLogApi.deleteMeal(date, slot, mealId),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
+export function useLogWeight() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, weight }: { date: string; weight: number }) =>
+      dailyLogApi.updateWeight(date, weight),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
