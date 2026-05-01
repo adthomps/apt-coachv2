@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Today from "./pages/Today";
 import Training from "./pages/Training";
 import WorkoutStart from "./pages/WorkoutStart";
 import SessionDetail from "./pages/SessionDetail";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/today" element={<ProtectedRoute><Today /></ProtectedRoute>} />
               <Route path="/training" element={<ProtectedRoute><Training /></ProtectedRoute>} />
               <Route path="/workouts/:id/start" element={<ProtectedRoute><WorkoutStart /></ProtectedRoute>} />
               <Route path="/sessions/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />

@@ -437,3 +437,42 @@ export const BLOOD_MARKER_CATEGORY_LABELS: Record<BloodMarkerCategory, string> =
   lipids: 'Lipids',
   metabolic: 'Metabolic',
 };
+
+// ============ Daily Log & Nutrition ============
+
+export interface MealEntry {
+  id: string;
+  label: string;
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+  notes?: string;
+  timestamp: string;
+}
+
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+
+export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+  snacks: 'Snacks',
+};
+
+export interface DailyLog {
+  id: string;
+  date: string; // YYYY-MM-DD
+  meals: Record<MealSlot, MealEntry[]>;
+  bodyWeight?: number; // lbs
+  notes?: string;
+}
+
+export interface NutritionTargets {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  source: 'protocol' | 'custom';
+  reasoning: string;
+}

@@ -15,6 +15,7 @@ import type {
   ExercisePerformanceProfile,
   AdaptiveRecommendation,
   BloodPanel,
+  DailyLog, MealEntry, MealSlot,
 } from './types';
 import {
   mockExercises, mockWorkouts, mockPrograms, mockSnapshots, mockImportJobs,
@@ -363,5 +364,52 @@ export const bloodPanelApi = {
     const recs = evaluateBloodPanel(panel);
     mockAdaptiveRecommendations.push(...recs);
     return recs;
+  },
+};
+
+// ============ Daily Log API ============
+
+const dailyLogs: Map<string, DailyLog> = new Map();
+
+function emptyLog(date: string): DailyLog {
+  return { id: `dl_${date}`, date, meals: { breakfast: [], lunch: [], dinner: [], snacks: [] } };
+}
+
+export const dailyLogApi = {
+  async getByDate(date: string): Promise<DailyLog> {
+    await delay(100);
+    if (!dailyLogs.has(date)) dailyLogs.set(date, emptyLog(date));
+    return dailyLogs.get(date)!;
+  },
+  async addMeal(date: string, slot: MealSlot, entry: Omit<MealEntry, 'id' | 'timestamp'>): Promise<MealEntry> {
+    await delay(150);
+    const log = dailyLogs.get(date) ?? emptyLog(date);
+    const meal: MealEntry = { id: `me_${Date.now()}`, ...entry, timestamp: new Date().toISOString() };
+    log.meals[slot].push(meal);
+    dailyLogs.set(date, log);
+    return meal;
+  },
+  async updateMeal(date: string, slot: MealSlot, mealId: string, patch: Partial<Omit<MealEntry, 'id' | 'timestamp'>>): Promise<MealEntry> {
+    await delay(150);
+    const log = dailyLogs.get(date);
+    if (!log) throw new Error('Log not found');
+    const arr = log.meals[slot];
+    const idx = arr.findIndex(m => m.id === mealId);
+    if (idx === -1) throw new Error('Meal not found');
+    arr[idx] = { ...arr[idx], ...patch };
+    return arr[idx];
+  },
+  async deleteMeal(date: string, slot: MealSlot, mealId: string): Promise<void> {
+    await delay(100);
+    const log = dailyLogs.get(date);
+    if (!log) return;
+    log.meals[slot] = log.meals[slot].filter(m => m.id !== mealId);
+  },
+  async updateWeight(date: string, weight: number): Promise<DailyLog> {
+    await delay(100);
+    const log = dailyLogs.get(date) ?? emptyLog(date);
+    log.bodyWeight = weight;
+    dailyLogs.set(date, log);
+    return log;
   },
 };

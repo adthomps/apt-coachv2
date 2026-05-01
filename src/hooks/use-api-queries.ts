@@ -7,8 +7,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   exerciseApi, workoutApi, programApi, snapshotApi,
   scheduleApi, sessionApi, performanceApi, adaptiveApi, importApi, bloodPanelApi,
+  dailyLogApi,
 } from '@/lib/api';
-import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel } from '@/lib/api/types';
+import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot } from '@/lib/api/types';
 
 // ============ Query Keys ============
 
@@ -25,6 +26,7 @@ export const queryKeys = {
   adaptiveRecommendations: ['adaptiveRecommendations'] as const,
   importJobs: ['importJobs'] as const,
   bloodPanels: ['bloodPanels'] as const,
+  dailyLog: (date: string) => ['dailyLog', date] as const,
 };
 
 // ============ Exercise Hooks ============
@@ -320,5 +322,41 @@ export function useAnalyzeBloodPanel() {
       qc.invalidateQueries({ queryKey: queryKeys.bloodPanels });
       qc.invalidateQueries({ queryKey: queryKeys.adaptiveRecommendations });
     },
+  });
+}
+
+// ============ Daily Log Hooks ============
+
+export function useDailyLog(date: string) {
+  return useQuery({
+    queryKey: queryKeys.dailyLog(date),
+    queryFn: () => dailyLogApi.getByDate(date),
+  });
+}
+
+export function useAddMeal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, slot, entry }: { date: string; slot: MealSlot; entry: Omit<MealEntry, 'id' | 'timestamp'> }) =>
+      dailyLogApi.addMeal(date, slot, entry),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
+export function useDeleteMeal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, slot, mealId }: { date: string; slot: MealSlot; mealId: string }) =>
+      dailyLogApi.deleteMeal(date, slot, mealId),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
+export function useLogWeight() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, weight }: { date: string; weight: number }) =>
+      dailyLogApi.updateWeight(date, weight),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
   });
 }

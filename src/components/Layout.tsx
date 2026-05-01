@@ -16,6 +16,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Admin moved to the footer (role-gated). Main nav is product surfaces only.
   const navItems = [
+    { path: '/today', label: 'Today' },
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/training', label: 'Training' },
     { path: '/schedule', label: 'Schedule' },
