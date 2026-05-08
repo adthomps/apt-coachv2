@@ -362,3 +362,30 @@ export function useLogWeight() {
     onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
   });
 }
+
+// ============ Nutrition Goal Hooks ============
+
+export function useNutritionGoals() {
+  return useQuery({
+    queryKey: queryKeys.nutritionGoals,
+    queryFn: () => nutritionGoalApi.list(),
+  });
+}
+
+export function useActiveNutritionGoal(date: string) {
+  return useQuery({
+    queryKey: queryKeys.nutritionGoalActive(date),
+    queryFn: () => nutritionGoalApi.getActive(date),
+  });
+}
+
+export function useCreateNutritionGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Omit<NutritionGoal, 'id' | 'createdAt'>) => nutritionGoalApi.create(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.nutritionGoals });
+      qc.invalidateQueries({ queryKey: ['nutritionGoals'] });
+    },
+  });
+}
