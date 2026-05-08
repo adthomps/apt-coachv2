@@ -16,6 +16,7 @@ import type {
   AdaptiveRecommendation,
   BloodPanel,
   DailyLog, MealEntry, MealSlot,
+  NutritionGoal,
 } from './types';
 import {
   mockExercises, mockWorkouts, mockPrograms, mockSnapshots, mockImportJobs,
@@ -411,5 +412,34 @@ export const dailyLogApi = {
     log.bodyWeight = weight;
     dailyLogs.set(date, log);
     return log;
+  },
+};
+
+// ============ Nutrition Goal API ============
+
+const nutritionGoals: NutritionGoal[] = [];
+
+export const nutritionGoalApi = {
+  async list(): Promise<NutritionGoal[]> {
+    await delay(80);
+    return [...nutritionGoals].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+  },
+  async getActive(date: string): Promise<NutritionGoal | null> {
+    await delay(80);
+    const sorted = [...nutritionGoals]
+      .filter(g => g.effectiveFrom <= date)
+      .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+    return sorted[0] ?? null;
+  },
+  async create(input: Omit<NutritionGoal, 'id' | 'createdAt'>): Promise<NutritionGoal> {
+    await delay(150);
+    const goal: NutritionGoal = { id: `ng_${Date.now()}`, ...input, createdAt: new Date().toISOString() };
+    nutritionGoals.push(goal);
+    return goal;
+  },
+  async delete(id: string): Promise<void> {
+    await delay(100);
+    const i = nutritionGoals.findIndex(g => g.id === id);
+    if (i !== -1) nutritionGoals.splice(i, 1);
   },
 };
