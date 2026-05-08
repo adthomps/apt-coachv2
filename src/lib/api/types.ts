@@ -468,11 +468,62 @@ export interface DailyLog {
   notes?: string;
 }
 
+export type GoalPhase = 'aggressive_cut' | 'cut' | 'maintain' | 'lean_gain';
+
+export const GOAL_PHASE_LABELS: Record<GoalPhase, string> = {
+  aggressive_cut: 'Aggressive Cut',
+  cut: 'Cut',
+  maintain: 'Maintain',
+  lean_gain: 'Lean Gain',
+};
+
+export const GOAL_PHASE_DELTA: Record<GoalPhase, number> = {
+  aggressive_cut: -750,
+  cut: -500,
+  maintain: 0,
+  lean_gain: 200,
+};
+
+export interface ActivityLevel {
+  value: number;
+  label: string;
+  description: string;
+}
+
+export const ACTIVITY_LEVELS: ActivityLevel[] = [
+  { value: 1.2, label: 'Sedentary', description: 'Desk job, little exercise' },
+  { value: 1.375, label: 'Light', description: '1–3 sessions/week' },
+  { value: 1.55, label: 'Moderate', description: '3–5 sessions/week' },
+  { value: 1.725, label: 'Hard', description: '6–7 sessions/week' },
+  { value: 1.9, label: 'Athlete', description: '2x/day or physical job' },
+];
+
+export interface NutritionGoalOverrides {
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+}
+
+export interface NutritionGoal {
+  id: string;
+  effectiveFrom: string; // YYYY-MM-DD
+  phase: GoalPhase;
+  activityMultiplier: number;
+  overrides: NutritionGoalOverrides;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface NutritionTargets {
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
-  source: 'protocol' | 'custom';
+  source: 'auto' | 'phase_adjusted' | 'overridden' | 'custom';
   reasoning: string;
+  phase: GoalPhase;
+  activityMultiplier: number;
+  autoBaseline: { calories: number; protein: number; carbs: number; fat: number };
+  overridden: { calories: boolean; protein: boolean; carbs: boolean; fat: boolean };
 }
