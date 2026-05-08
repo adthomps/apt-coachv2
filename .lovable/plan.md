@@ -1,118 +1,124 @@
 
-# Daily System Page — "/today"
+# Daily Macro Targets — Auto Baseline + Manual Overrides
 
-A single day-at-a-glance hub combining today's training, macro logging, nutrition targets (derived from body composition), and health signals.
+Give the user control over daily calorie/protein/carb/fat targets while keeping the body-composition-aware auto baseline as the default. Targets become a first-class, versioned record so we can chart them against actuals over time.
 
 ---
 
-## 1. New route: `/today`
-
-Add to App.tsx and nav. This becomes the daily operational page — Dashboard stays as the strategic overview.
-
-## 2. Domain types (`src/lib/api/types.ts`)
+## 1. Domain model changes (`src/lib/api/types.ts`)
 
 ```text
-MealEntry {
-  id, label (e.g. "Breakfast"), protein, carbs, fat, calories, notes?, timestamp
-}
+GoalPhase = 'aggressive_cut' | 'cut' | 'maintain' | 'lean_gain'
 
-DailyLog {
-  id, date (YYYY-MM-DD),
-  meals: MealEntry[],
-  bodyWeight?: number (lbs),
+PhaseDelta (kcal):
+  aggressive_cut: -750
+  cut:            -500
+  maintain:        0
+  lean_gain:      +200
+
+NutritionGoal {
+  id
+  effectiveFrom: string (YYYY-MM-DD)
+  phase: GoalPhase
+  activityMultiplier: number          // default 1.55
+  overrides: {                        // any subset; null = use auto
+    calories?: number
+    protein?: number
+    carbs?: number
+    fat?: number
+  }
   notes?: string
-}
-
-NutritionTargets {
-  calories, protein, carbs, fat  — all numbers
-  source: 'protocol' | 'custom'
+  createdAt: string
 }
 ```
 
-## 3. Nutrition target engine (`src/lib/nutrition-targets.ts`)
+Extend `NutritionTargets` with:
+- `phase: GoalPhase`
+- `activityMultiplier: number`
+- `autoBaseline: { calories, protein, carbs, fat }`  — what the engine would have computed
+- `overridden: { calories: boolean, protein: boolean, carbs: boolean, fat: boolean }`
 
-Derives daily macro targets from the latest Snapshot + Protocol logic:
-- **Protein**: 1g per lb lean mass (already in protocol.ts)
-- **Calories**: estimated TDEE from lean mass × activity multiplier, then adjusted for current goal (surplus/deficit based on fat-mass trend from ProgressCompare)
-- **Carbs/Fat**: remaining calories split based on body fat % (lower BF% → higher carb ratio)
+`source` becomes `'auto' | 'phase_adjusted' | 'overridden'`.
 
-Returns `NutritionTargets` with the computed values and reasoning strings.
+## 2. Engine update (`src/lib/nutrition-targets.ts`)
 
-## 4. Mock API layer (`src/lib/api/client.ts`)
+`computeNutritionTargets(snapshot, compare, goal?)`:
 
-Add `dailyLogApi`:
-- `getByDate(date)` — returns or creates a DailyLog
-- `addMeal(date, meal)` — appends a MealEntry
-- `updateMeal(date, mealId, partial)` — edits a meal
-- `deleteMeal(date, mealId)` — removes a meal
-- `updateWeight(date, weight)` — logs morning weight
+1. Compute auto baseline (existing logic, but the trend-based ±150/200/250 adjustment moves into a separate helper so it can coexist with phase delta).
+2. If `goal` provided:
+   - Use `goal.activityMultiplier` instead of the hardcoded 1.55.
+   - Apply `PhaseDelta[goal.phase]` to calories instead of (not in addition to) the trend nudge. Keep trend nudge only when phase is `maintain`.
+   - Recompute carbs/fat split from remaining calories using current body-fat % rule.
+   - Apply per-macro overrides last; if calories are overridden, recompute carb/fat from remainder unless those are also overridden.
+3. Return enriched `NutritionTargets` with `autoBaseline`, `overridden` flags, and a refreshed `reasoning` string that names the phase, activity, and any overrides.
 
-Backed by in-memory mock store (same pattern as existing APIs).
+## 3. API + persistence (`src/lib/api/client.ts`)
 
-## 5. React Query hooks (`src/hooks/use-api-queries.ts`)
+Add `nutritionGoalApi` (mock store, same pattern as other apis):
 
-Add `useDailyLog(date)`, `useAddMeal`, `useUpdateMeal`, `useDeleteMeal`, `useLogWeight` mutations with optimistic updates.
+- `list()` → `NutritionGoal[]` sorted by `effectiveFrom` desc
+- `getActive(date)` → most recent goal with `effectiveFrom <= date`
+- `create(input)` → new versioned record (never edits past records)
+- `delete(id)` → remove a future-dated draft
 
-## 6. Page layout: `src/pages/Today.tsx`
+Today.tsx will resolve targets via:
+```text
+const goal = await nutritionGoalApi.getActive(today)
+const targets = computeNutritionTargets(snapshot, compare, goal)
+```
 
-Top-to-bottom sections using existing `SectionCard`, `KpiStat`, `DeltaValue`, `MetricExplainer`:
+## 4. Hooks (`src/hooks/use-api-queries.ts`)
 
-### A. Header
-- "Today — [Day, Month Date]"
-- Morning weight input (single inline field, logs on blur/enter)
+- `useNutritionGoals()`
+- `useActiveNutritionGoal(date)`
+- `useCreateNutritionGoal()` — invalidates active-goal + daily-log queries
 
-### B. Nutrition Summary Bar
-- Four `KpiStat` tiles: Calories, Protein, Carbs, Fat
-- Each shows consumed / target with a progress indicator
-- Protein target auto-derived from lean mass; calories from the nutrition engine
-- `MetricExplainer` disclosure: "Why this target" — explains the body-comp derivation
+## 5. UI: inline panel on `/today`
 
-### C. Meal Log
-- Collapsible meal slots: Breakfast, Lunch, Dinner, Snacks
-- Each meal: quick-add row with protein/carbs/fat/cal fields + optional label
-- Running subtotals per meal
-- Add/edit/delete with `DeleteConfirmDialog`
+New component `src/components/daily/NutritionTargetsPanel.tsx`, rendered as a `Collapsible` directly under `NutritionBar`.
 
-### D. Today's Training
-- If a scheduled workout exists: show workout name, estimated duration, "Start" button (links to `/workouts/:id/start`)
-- If completed: show session summary (sets completed, duration, RPE)
-- If rest day: show rest-day messaging
+Header row (always visible):
+- Current phase chip (e.g. "Lean Gain · 1.55× activity")
+- "Edit targets" toggle
 
-### E. Daily Signals (compact)
-- Pull top 2-3 health signals from `HealthCommandSummary` logic
-- Body-comp-aware nudges from the nutrition engine (e.g. "You're 40g short on protein")
+Expanded body:
+- **Phase selector** — 4 segmented buttons: Aggressive Cut · Cut · Maintain · Lean Gain. Each shows its kcal delta beneath the label.
+- **Activity multiplier** — segmented control: 1.2 Sedentary · 1.375 Light · 1.55 Moderate · 1.725 Hard · 1.9 Athlete.
+- **Per-macro override grid** — four numeric inputs (Cal / P / C / F). Each shows the auto value in placeholder; a "Reset" link appears next to any field that is overridden.
+- **Effective from** — date picker, defaults to today; locks past dates so history stays intact.
+- **Save** button → calls `useCreateNutritionGoal`. Toast: "New target active from {date}."
+- **Why these numbers** — reuses `MetricExplainer` showing the engine's reasoning string (auto baseline + phase + overrides).
 
-## 7. Components
+Visual: reuses `SectionCard`, `Button`, `Input`, `Label`, existing segmented-control pattern (build with `ToggleGroup`). No new design primitives.
 
-| Component | Location | Purpose |
-|---|---|---|
-| `NutritionBar` | `src/components/daily/NutritionBar.tsx` | Four KPI tiles with progress rings |
-| `MealCard` | `src/components/daily/MealCard.tsx` | Collapsible meal with macro entry rows |
-| `MealEntryRow` | `src/components/daily/MealEntryRow.tsx` | Inline form: label + P/C/F/cal inputs |
-| `DailyTrainingCard` | `src/components/daily/DailyTrainingCard.tsx` | Today's workout status |
-| `DailySignals` | `src/components/daily/DailySignals.tsx` | Compact health nudges |
+## 6. NutritionBar enhancement
 
-All components reuse `SectionCard`, `KpiStat`, `DeltaValue`, `MetricExplainer` — no new design primitives.
+When a value is overridden, append a small "•" indicator next to the target number with a tooltip "Manual override." Keeps the auto vs manual distinction visible at a glance.
 
-## 8. Navigation
+## 7. Out of scope for this pass
 
-Add "Today" link to nav (Layout.tsx), placed first before Dashboard. Icon: `CalendarCheck` or `Sun` from lucide.
+- No /settings duplication — single source of truth on /today.
+- No goal-vs-actual time-series chart yet (the data shape supports it; chart lives in a future /health enhancement).
+- No reminders to revisit targets after a new snapshot (future "stale target" nudge in `DailySignals`).
+- No labs (blood panel) integration into target math yet — current model uses snapshot only. Future: hsCRP, fasting glucose, lipids could shift carb ratio. Hooked location: the carb/fat split block in `computeNutritionTargets`.
 
-## 9. Files affected
+## 8. Files
 
-- **New**: `src/pages/Today.tsx`, `src/lib/nutrition-targets.ts`, `src/components/daily/NutritionBar.tsx`, `MealCard.tsx`, `MealEntryRow.tsx`, `DailyTrainingCard.tsx`, `DailySignals.tsx`
-- **Modified**: `src/lib/api/types.ts` (new types), `src/lib/api/client.ts` (dailyLogApi), `src/hooks/use-api-queries.ts` (new hooks), `src/App.tsx` (route), `src/components/Layout.tsx` (nav link)
+**New**
+- `src/components/daily/NutritionTargetsPanel.tsx`
 
-## 10. What this does NOT include
-
-- No food database / search / barcode scanning (macro-only as chosen)
-- No persistent backend — stays in mock API layer consistent with current architecture
-- No meal planning or recipe features
-- No calorie counting from external APIs
+**Edited**
+- `src/lib/api/types.ts` — `GoalPhase`, `NutritionGoal`, enriched `NutritionTargets`
+- `src/lib/nutrition-targets.ts` — accepts goal, applies phase + overrides
+- `src/lib/api/client.ts` + `src/lib/api/index.ts` — `nutritionGoalApi`
+- `src/hooks/use-api-queries.ts` — new hooks
+- `src/pages/Today.tsx` — resolve active goal, render panel, pass enriched targets
+- `src/components/daily/NutritionBar.tsx` — override indicator
 
 ## Validation
 
-- Type-check passes
-- Page renders with mock data showing nutrition targets derived from latest snapshot
-- Meal CRUD works (add, edit, delete)
-- Targets update when snapshot data changes
+- Type-check passes.
+- Default state (no goal record) matches current behavior exactly.
+- Selecting a phase recomputes calories and macro split immediately.
+- Per-macro override persists across reload and shows "•" indicator on the bar.
+- Creating a new goal with a future `effectiveFrom` does not change today's targets until that date.

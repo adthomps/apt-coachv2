@@ -7,9 +7,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   exerciseApi, workoutApi, programApi, snapshotApi,
   scheduleApi, sessionApi, performanceApi, adaptiveApi, importApi, bloodPanelApi,
-  dailyLogApi,
+  dailyLogApi, nutritionGoalApi,
 } from '@/lib/api';
-import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot } from '@/lib/api/types';
+import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal } from '@/lib/api/types';
 
 // ============ Query Keys ============
 
@@ -27,6 +27,8 @@ export const queryKeys = {
   importJobs: ['importJobs'] as const,
   bloodPanels: ['bloodPanels'] as const,
   dailyLog: (date: string) => ['dailyLog', date] as const,
+  nutritionGoals: ['nutritionGoals'] as const,
+  nutritionGoalActive: (date: string) => ['nutritionGoals', 'active', date] as const,
 };
 
 // ============ Exercise Hooks ============
@@ -358,5 +360,32 @@ export function useLogWeight() {
     mutationFn: ({ date, weight }: { date: string; weight: number }) =>
       dailyLogApi.updateWeight(date, weight),
     onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
+// ============ Nutrition Goal Hooks ============
+
+export function useNutritionGoals() {
+  return useQuery({
+    queryKey: queryKeys.nutritionGoals,
+    queryFn: () => nutritionGoalApi.list(),
+  });
+}
+
+export function useActiveNutritionGoal(date: string) {
+  return useQuery({
+    queryKey: queryKeys.nutritionGoalActive(date),
+    queryFn: () => nutritionGoalApi.getActive(date),
+  });
+}
+
+export function useCreateNutritionGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Omit<NutritionGoal, 'id' | 'createdAt'>) => nutritionGoalApi.create(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.nutritionGoals });
+      qc.invalidateQueries({ queryKey: ['nutritionGoals'] });
+    },
   });
 }
