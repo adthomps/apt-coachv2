@@ -13,42 +13,39 @@ function pct(val: number, target: number) {
   return Math.min(Math.round((val / target) * 100), 999);
 }
 
-const MiniProgress: React.FC<{ value: number; max: number; color: string }> = ({ value, max, color }) => {
-  const pctVal = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+const Dot: React.FC<{ on: boolean }> = ({ on }) =>
+  on ? <span title="Manual override" className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-primary align-middle" /> : null;
+
+const NutritionBar: React.FC<NutritionBarProps> = ({ consumed, targets }) => {
+  const ov = targets.overridden;
   return (
-    <div className="h-1.5 w-full rounded-full bg-muted mt-2">
-      <div className="h-full rounded-full transition-all" style={{ width: `${pctVal}%`, backgroundColor: color }} />
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <KpiStat
+        icon={<Flame />}
+        label="Calories"
+        value={<>{consumed.calories} <span className="text-sm font-normal text-muted-foreground">/ {targets.calories}<Dot on={ov.calories} /></span></>}
+        className="relative"
+      />
+      <KpiStat
+        icon={<Beef />}
+        label="Protein"
+        value={<>{consumed.protein}g <span className="text-sm font-normal text-muted-foreground">/ {targets.protein}g<Dot on={ov.protein} /></span></>}
+        className="relative"
+      />
+      <KpiStat
+        icon={<Wheat />}
+        label="Carbs"
+        value={<>{consumed.carbs}g <span className="text-sm font-normal text-muted-foreground">/ {targets.carbs}g<Dot on={ov.carbs} /></span></>}
+        className="relative"
+      />
+      <KpiStat
+        icon={<Droplets />}
+        label="Fat"
+        value={<>{consumed.fat}g <span className="text-sm font-normal text-muted-foreground">/ {targets.fat}g<Dot on={ov.fat} /></span></>}
+        className="relative"
+      />
     </div>
   );
 };
-
-const NutritionBar: React.FC<NutritionBarProps> = ({ consumed, targets }) => (
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <KpiStat
-      icon={<Flame />}
-      label="Calories"
-      value={<>{consumed.calories} <span className="text-sm font-normal text-muted-foreground">/ {targets.calories}</span></>}
-      className="relative"
-    />
-    <KpiStat
-      icon={<Beef />}
-      label="Protein"
-      value={<>{consumed.protein}g <span className="text-sm font-normal text-muted-foreground">/ {targets.protein}g</span></>}
-      className="relative"
-    />
-    <KpiStat
-      icon={<Wheat />}
-      label="Carbs"
-      value={<>{consumed.carbs}g <span className="text-sm font-normal text-muted-foreground">/ {targets.carbs}g</span></>}
-      className="relative"
-    />
-    <KpiStat
-      icon={<Droplets />}
-      label="Fat"
-      value={<>{consumed.fat}g <span className="text-sm font-normal text-muted-foreground">/ {targets.fat}g</span></>}
-      className="relative"
-    />
-  </div>
-);
 
 export default NutritionBar;

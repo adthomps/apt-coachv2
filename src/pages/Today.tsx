@@ -8,10 +8,10 @@ import MealCard from '@/components/daily/MealCard';
 import DailyTrainingCard from '@/components/daily/DailyTrainingCard';
 import DailySignals from '@/components/daily/DailySignals';
 import MetricExplainer from '@/components/health/MetricExplainer';
+import NutritionTargetsPanel from '@/components/daily/NutritionTargetsPanel';
 import { Input } from '@/components/ui/input';
-import { useDailyLog, useAddMeal, useDeleteMeal, useLogWeight, useSnapshots, useSchedule, useSessions } from '@/hooks/use-api-queries';
-import { snapshotApi } from '@/lib/api';
-import { computeNutritionTargets } from '@/lib/nutrition-targets';
+import { useDailyLog, useAddMeal, useDeleteMeal, useLogWeight, useSnapshots, useSchedule, useSessions, useActiveNutritionGoal } from '@/hooks/use-api-queries';
+import { computeNutritionTargets, defaultTargets } from '@/lib/nutrition-targets';
 import type { MealSlot, ProgressCompare, Snapshot } from '@/lib/api/types';
 import { MEAL_SLOT_LABELS } from '@/lib/api/types';
 
@@ -30,6 +30,7 @@ const Today: React.FC = () => {
   const { data: snapshots = [] } = useSnapshots();
   const { data: scheduleEntries = [] } = useSchedule();
   const { data: sessions = [] } = useSessions();
+  const { data: activeGoal = null } = useActiveNutritionGoal(date);
   const addMeal = useAddMeal();
   const deleteMeal = useDeleteMeal();
   const logWeight = useLogWeight();
@@ -64,9 +65,9 @@ const Today: React.FC = () => {
   }, [latestDexa, previousDexa]);
 
   const targets = useMemo(() => {
-    if (!latestDexa) return { calories: 2400, protein: 180, carbs: 250, fat: 80, source: 'custom' as const, reasoning: 'No body composition data — using default targets. Import a DEXA scan for personalized recommendations.' };
-    return computeNutritionTargets(latestDexa, compare);
-  }, [latestDexa, compare]);
+    if (!latestDexa) return defaultTargets();
+    return computeNutritionTargets(latestDexa, compare, activeGoal ?? undefined);
+  }, [latestDexa, compare, activeGoal]);
 
   // Consumed totals
   const consumed = useMemo(() => {
@@ -119,13 +120,16 @@ const Today: React.FC = () => {
             <h2 className="text-lg font-semibold text-foreground">Nutrition</h2>
           </div>
           <NutritionBar consumed={consumed} targets={targets} />
+          <div className="mt-3">
+            <NutritionTargetsPanel targets={targets} activeGoal={activeGoal} />
+          </div>
           <div className="mt-2">
             <MetricExplainer
               title="How your targets are calculated"
               compact
               explanation={{
                 what: targets.reasoning,
-                why: 'Targets are derived from your latest DEXA scan and body composition trends.',
+                why: 'Targets are derived from your latest DEXA scan, current goal phase, and any manual overrides.',
                 focus: ['Hit your protein target first — it\'s the most important macro for body recomposition.'],
               }}
             />
