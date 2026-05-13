@@ -432,12 +432,21 @@ export interface BloodMarker {
   time: string;
 }
 
+export type BloodPanelSource = 'rythmhealth' | 'apple_health';
+
+export const BLOOD_PANEL_SOURCE_LABELS: Record<BloodPanelSource, string> = {
+  rythmhealth: 'Rythm',
+  apple_health: 'Apple Health',
+};
+
 export interface BloodPanel {
   id: string;
-  source: 'rythmhealth';
+  source: BloodPanelSource;
   panelDate: string;
   markers: BloodMarker[];
   rawCsv?: string;
+  rawJson?: string;
+  rawPdfText?: string;
   notes?: string;
   createdAt: string;
 }
