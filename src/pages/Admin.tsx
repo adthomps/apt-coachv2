@@ -130,6 +130,11 @@ const Admin: React.FC = () => {
       case 'skulpt_chisel': return parseSkulptJson(text);
       case 'lumen': return parseLumenJson(text);
       case 'apple_health_vitals': return parseAppleHealthVitalsJson(text);
+      default: return { data: null, errors: ['Unsupported source'] as string[], warnings: [] as string[] };
+    }
+  };
+      case 'lumen': return parseLumenJson(text);
+      case 'apple_health_vitals': return parseAppleHealthVitalsJson(text);
       default: return { data: null, errors: ['Unsupported source'], warnings: [] } as const;
     }
   };
