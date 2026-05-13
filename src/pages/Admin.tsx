@@ -31,6 +31,7 @@ import { toast } from '@/hooks/use-toast';
 type ImportSource =
   | 'body_scan'
   | 'blood_panel'
+  | 'apple_health_labs'
   | 'exercise_library'
   | 'workouts'
   | 'programs';
@@ -38,6 +39,7 @@ type ImportSource =
 const SOURCE_LABELS: Record<ImportSource, string> = {
   body_scan: 'Body Scan (BodySpec / DEXA)',
   blood_panel: 'Blood Panel (RythmHealth CSV)',
+  apple_health_labs: 'Apple Health Labs (PDF or FHIR JSON)',
   exercise_library: 'Exercises (JSON)',
   workouts: 'Workouts (JSON)',
   programs: 'Programs (JSON)',
@@ -49,6 +51,10 @@ const SAMPLE_DATA: Record<ImportSource, string> = {
     total_mass_lbs: 181.9, fat_mass_lbs: 30.9, lean_mass_lbs: 143.9, bone_mass_lbs: 7.1, body_fat_pct: 17.0,
   }, null, 2),
   blood_panel: 'marker,value,unit,reference_range,status,time\nFree T3,4.25,pg/mL,2 - 4.4,optimal,2026-03-09\nApoB,131,mg/dL,0 - 90,outOfRange,2026-03-09',
+  apple_health_labs: JSON.stringify([
+    { marker: 'ApoB', value: 95, unit: 'mg/dL', referenceRange: '0 - 90', time: '2026-04-01' },
+    { marker: 'HDL Cholesterol', value: 58, unit: 'mg/dL', referenceRange: '40 - 100', time: '2026-04-01' },
+  ], null, 2),
   exercise_library: JSON.stringify([{ name: 'Romanian Deadlift', movementPattern: 'hip_hinge', muscleGroups: ['hamstrings', 'glutes'], equipment: ['barbell'], difficulty: 'intermediate' }], null, 2),
   workouts: JSON.stringify([{ name: 'Upper Body Strength', difficulty: 'intermediate', estimatedDuration: 60, blocks: [] }], null, 2),
   programs: JSON.stringify([{ name: '8 Week Recomp', durationWeeks: 8, goal: 'recomposition', difficulty: 'intermediate' }], null, 2),
