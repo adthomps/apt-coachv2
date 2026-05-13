@@ -202,6 +202,23 @@ const Admin: React.FC = () => {
             isValid: true,
           });
         }
+      } else if (DAILY_CONTEXT_SOURCES.includes(source)) {
+        const result = parseCheckin(source, rawText);
+        if (result.errors.length > 0) setErrors(result.errors);
+        if (result.warnings.length > 0) setWarnings(result.warnings);
+        if (result.data) {
+          const checkins = result.data.checkins;
+          setPreview({
+            type: 'snapshots', schemaVersion: '1.0', totalItems: checkins.length,
+            adds: checkins.length, updates: 0, skips: 0, errors: 0,
+            items: checkins.map((c, i) => ({
+              index: i, action: 'add' as const,
+              name: `${c.date} · ${SOURCE_LABELS[source]}`,
+              data: c as unknown as Record<string, unknown>,
+            })),
+            isValid: true,
+          });
+        }
       } else {
         const result = parseEntityArrayJson(rawText);
         if (result.errors.length > 0) setErrors(result.errors);
@@ -249,6 +266,11 @@ const Admin: React.FC = () => {
         } catch {
           toast({ title: 'Apple Health labs imported' });
         }
+      } else if (DAILY_CONTEXT_SOURCES.includes(source)) {
+        const result = parseCheckin(source, rawText);
+        if (!result.data) throw new Error('Validation failed');
+        const saved = await bulkCreateCheckins.mutateAsync(result.data.checkins);
+        toast({ title: `${SOURCE_LABELS[source]} imported`, description: `${saved.length} reading${saved.length !== 1 ? 's' : ''} saved.` });
       } else {
         const result = parseEntityArrayJson(rawText);
         if (!result.data) throw new Error('Validation failed');
