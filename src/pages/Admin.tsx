@@ -182,6 +182,16 @@ const Admin: React.FC = () => {
         } catch {
           toast({ title: 'Blood panel imported' });
         }
+      } else if (source === 'apple_health_labs') {
+        const result = parseAppleHealthLabsJson(rawText);
+        if (!result.data) throw new Error('Validation failed');
+        const saved = await createBloodPanel.mutateAsync(result.data.panelInput);
+        try {
+          const recs = await analyzeBloodPanel.mutateAsync(saved.id);
+          toast({ title: 'Apple Health labs imported', description: `${result.data.panelInput.markers.length} markers, ${recs.length} insight${recs.length !== 1 ? 's' : ''}.` });
+        } catch {
+          toast({ title: 'Apple Health labs imported' });
+        }
       } else {
         const result = parseEntityArrayJson(rawText);
         if (!result.data) throw new Error('Validation failed');
