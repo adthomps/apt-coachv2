@@ -1,81 +1,142 @@
 ## Goal
 
-Produce a single, paste-ready markdown document that:
-1. Describes the current **Today** page and **Dashboard** ("Command Center") in plain language — what they show, the data model behind them, the layout, the interactions.
-2. Embeds a **one-shot prompt** another coding assistant (Cursor, Claude, etc.) can drop into a different React + Tailwind + shadcn project to recreate the same screens — without copying our codebase.
+Bring Apple Health–style data into APT in three coordinated places, each chosen to match how the data is naturally produced:
 
-Saved to `/mnt/documents/today-and-dashboard-spec.md` and surfaced as a downloadable artifact.
+1. **Workout sessions** → expand `SessionMetrics` (cardio + HR detail).
+2. **Daily vitals** → new daily-keyed record edited inline on `/today` and bulk-importable.
+3. **Lab results** → Apple Health PDF/JSON importer that lands in the same `BloodPanel` store as RythmHealth so they can be compared side-by-side.
 
-## What goes in the document
+No backend changes — extends the mock API layer and types; everything is local-first per existing patterns.
 
-### 1. Product framing (short)
-- App: **APT Fitness Coach** — body-composition-aware strength + nutrition coaching, not a generic tracker.
-- Core principle: every recommendation cites the scan / marker / session it came from.
-- Units: pounds (lbs) for all mass.
+---
 
-### 2. Today page — feature spec
-- Route: `/today`. Purpose: day-at-a-glance hub.
-- Sections (in order):
-  1. **Header**: "Today — {Weekday, Month Day}" + morning body-weight input (lbs) on the right.
-  2. **Nutrition** — `NutritionBar` with 4 KPI tiles (Calories / Protein / Carbs / Fat) showing `consumed / target` with a small dot indicator when a macro is manually overridden.
-  3. **Targets panel** (collapsible) — phase selector (Aggressive Cut / Cut / Maintain / Lean Gain with kcal delta), activity-level toggle (Sedentary → Athlete, 1.2× → 1.9×), per-macro override inputs, "effective from" date, Save → versions a `NutritionGoal` record.
-  4. **Targets explainer** — `MetricExplainer` showing how the targets were derived (BMR, TDEE, phase delta, carb/fat split, overrides).
-  5. **Meals** — four collapsible meal cards (Breakfast / Lunch / Dinner / Snacks). Each row: item label, P / C / F / Cal inputs (Cal auto-computes from `4P + 4C + 9F` if blank). Add / delete inline.
-  6. **Today's Training** — three states: completed (workout name + duration + total sets + RPE), scheduled (workout name + Start CTA → `/workouts/{id}/start`), or rest day (recovery prompt).
-  7. **Daily Signals** — up to 3 short, computed coaching lines (protein gap > 30 g, calorie under/over thresholds, "on track" when protein hit and calories ≤ target+100).
+## 1. Session metrics (edit on existing Sessions tab)
 
-#### Nutrition target engine
-Pure TS, no backend. Inputs: latest DEXA `Snapshot`, optional `ProgressCompare`, optional `NutritionGoal`.
-- Protein = `round(leanMass)` g (1 g per lb of lean mass).
-- BMR = Katch-McArdle from lean mass (lbs → kg internally).
-- TDEE = `BMR × activityMultiplier`.
-- Phase delta (kcal): aggressive_cut −750, cut −500, maintain 0, lean_gain +200.
-- Trend nudge (Maintain only): fat ↑ → −200, clean lean ↑ → +150, lean ↓ → +250.
-- Carb/fat split by body fat %: <15 → 65/35, <22 → 55/45, else 40/60. Computed from calories minus protein calories.
-- Manual overrides applied last, per macro, with a recompute of the leftover split when only some are set.
-- Returns `NutritionTargets` with `source`, `reasoning`, `autoBaseline`, `overridden` flags.
+Already partially in place (`activeCalories`, `totalCalories`, `avgHeartRate`, `rpe`). Add cardio fields and a kind flag.
 
-#### Versioned `NutritionGoal`
-- Stored as immutable records keyed by `effectiveFrom` (YYYY-MM-DD).
-- Active goal for a date = the latest record where `effectiveFrom <= date`.
-- Fields: phase, activityMultiplier, overrides {calories?, protein?, carbs?, fat?}, notes.
+**Where**: `src/components/SessionsTab.tsx` edit dialog + `src/pages/SessionDetail.tsx`. No new page — Apple Health workout data is most naturally tied to a session.
 
-### 3. Dashboard ("Command Center") — feature spec
-- Route: `/dashboard`. Purpose: weekly orientation across health + training.
-- Empty state: when no DEXA, blood panel, or smart-scale data exists → single CTA card driving to imports.
-- Sections:
-  1. **PageHeader** — "Command Center" + greeting using first name.
-  2. **Health Command Summary** (feature card):
-     - Headline insight (top body-scan or blood insight): category badge, title, rationale, "Evidence: {label} {value} · {date}", optional "the science" explainer.
-     - Three columns: **Active Signals** (chips for lean Δ, fat Δ, markers in/out of range, current data inputs), **Priority Direction** (first action of the headline insight + protein-target chip), **Training Continuity** (adherence %, completed/total, streak chip, next session weekday chip).
-  3. **Health Direction grid** — three SourceCards: DEXA, Rythm Health (blood), Withings. Each: status badge (Optimal / Watch / Concern / No data), 2 KPI tiles, Priority Action, Food Guidance, footer link to `/health`.
-     - DEXA status from BF%: <18 optimal, <25 watch, else concern.
-     - Rythm status from out-of-range count: 0 optimal, 1–2 watch, ≥3 concern.
-  4. **Training section** — pulse strip (sessions/14d, volume/14d, adherence, upcoming count), three columns: Upcoming (next 3 scheduled w/ Start), Latest Session (completion %, volume, duration, calories/HR/RPE chips, view detail), Training Insights (de-duped from last 5 sessions).
-  5. **Supporting Insights** — `AIInsightsPanel` with the remaining top-6 body + panel insights, each citing its source.
+**Type changes** (`src/lib/api/types.ts`):
+```ts
+export type SessionKind = 'strength' | 'cardio' | 'mixed';
 
-### 4. Domain types (compact)
-List the minimum types another assistant needs: `Snapshot`, `BodyComposition`, `ProgressCompare`, `BloodPanel`, `BloodMarker`, `ScheduleEntry`, `WorkoutSession`, `DailyLog`, `MealEntry`, `MealSlot`, `NutritionGoal`, `NutritionTargets`, `GoalPhase`, plus the `GOAL_PHASE_DELTA` and `ACTIVITY_LEVELS` constants.
+export interface SessionMetrics {
+  activeCalories?: number;
+  totalCalories?: number;
+  avgHeartRate?: number;
+  maxHeartRate?: number;       // new
+  rpe?: number;
+  // cardio-only
+  distanceMiles?: number;       // new
+  avgPaceSecPerMile?: number;   // new (stored numeric, rendered mm:ss)
+  elevationGainFt?: number;     // new (optional bonus)
+}
 
-### 5. Design conventions
-- React 18 + Vite + TypeScript + Tailwind + shadcn/ui.
-- Semantic color tokens only (`bg-muted`, `text-muted-foreground`, `border-border`, `text-primary`, etc.) — no raw colors.
-- Layout primitives reused: `PageHeader`, `SectionCard` (with optional `variant="feature"`), `EmptyState`, `KpiStat`, `StatusBadge`, `MetricExplainer`, `Chip`-style rounded badges.
-- Lucide icons throughout.
-- `react-router-dom` for links to `/health`, `/training`, `/schedule`, `/workouts/:id/start`, `/sessions/:id`.
-- Mock-API friendly: each page consumes hooks (`useDailyLog`, `useSnapshots`, `useBloodPanels`, `useSchedule`, `useSessions`, `useActiveNutritionGoal`, `useAddMeal`, `useDeleteMeal`, `useLogWeight`, `useCreateNutritionGoal`) so the recipient can wire any backend.
+// WorkoutSession gets:
+kind?: SessionKind;             // defaults 'strength'
+```
 
-### 6. The one-shot prompt (verbatim block)
-A self-contained prompt the user can paste into another assistant. It will:
-- State the stack and conventions.
-- List the two routes and every section with the exact ordering and copy.
-- Include the nutrition-target formulas and constants.
-- Include the minimum TypeScript interfaces.
-- Tell the assistant to stub the hooks behind a typed mock layer if no backend exists.
-- Demand semantic tokens, Lucide icons, shadcn primitives, no raw colors.
+**UI**:
+- Edit dialog gains a "Session kind" toggle. When `cardio` or `mixed`, reveal Distance + Avg pace inputs.
+- Session card body shows pace + distance pills when present.
+- `SessionDetail` summary row mirrors the same fields.
 
-## Deliverable
+---
 
-`/mnt/documents/today-and-dashboard-spec.md` rendered as a `<lov-artifact>` so the user can download it directly.
+## 2. Daily vitals (new section on `/today`)
 
-No code changes to the project.
+These are once-per-day point readings, not session-bound, so they belong on the daily log.
+
+**Type changes**:
+```ts
+export interface DailyVitals {
+  bloodOxygenPct?: number;          // SpO2
+  systolicMmHg?: number;
+  diastolicMmHg?: number;
+  bodyTempF?: number;
+  respiratoryRateBrpm?: number;
+  sleepScore?: number;              // 0–100
+  sleepHours?: number;
+  stepsCount?: number;
+  waistCircumferenceIn?: number;
+  restingHeartRate?: number;
+  notes?: string;
+}
+
+// DailyLog gets:
+vitals?: DailyVitals;
+```
+
+**API** (`src/lib/api/client.ts`): extend `dailyLogApi` with `updateVitals(date, vitals)` that merges into the day's log.
+
+**Hook**: `useUpdateDailyVitals()` mirroring `useLogWeight`.
+
+**UI** — new component `src/components/daily/DailyVitalsPanel.tsx`:
+- Collapsible card placed on `/today` between the Meals section and `DailyTrainingCard`.
+- Compact grid of inline numeric inputs grouped:
+  - **Cardiovascular**: Resting HR, BP (systolic/diastolic), Blood Oxygen
+  - **Recovery**: Sleep score, Sleep hours, Respiratory rate, Body temp
+  - **Activity**: Steps
+  - **Body**: Waist circumference (also fed into trend display next to morning weight)
+- Empty fields render a subtle "—" placeholder; saving on blur, same UX as the morning weight input.
+- Today header: small "Vitals: 3/9 logged" hint chip linking to the panel.
+
+**Why on /today and not Sessions**: SpO2, BP, sleep, steps, etc. are not workout-bound and are entered/imported daily.
+
+---
+
+## 3. Apple Health labs import (PDF + JSON)
+
+Apple Health Records can export lab results as PDF (provider summary) or as Health export `export.xml` / FHIR JSON. We support both via a new importer that produces a `BloodPanel` with `source: 'apple_health'`, so RythmHealth and Apple Health labs live in the same comparison view.
+
+**Type changes**:
+```ts
+export type BloodPanelSource = 'rythmhealth' | 'apple_health';
+// BloodPanel.source widens to BloodPanelSource
+// add optional rawPdfText?: string and rawJson?: string alongside rawCsv
+```
+
+**New importer** `src/lib/importers/applehealth-labs.ts`:
+- `parseAppleHealthLabsJson(text)` — accepts FHIR `Observation` bundle or Apple Health export JSON; maps LOINC codes / display names to our marker names; computes `status` from referenceRange when available, otherwise `'average'`.
+- `parseAppleHealthLabsPdf(file)` — runs the PDF through a lightweight client-side text extractor (`pdfjs-dist`, already a viable browser dep) and a regex pass that finds rows of `marker  value  unit  reference`. Returns the same normalized result with warnings for any rows it could not parse.
+- Exported via `src/lib/importers/index.ts` next to existing parsers.
+
+**Admin Imports tab** (`src/pages/Admin.tsx`):
+- Add source `apple_health_labs` with label "Apple Health Labs (PDF or JSON)".
+- For PDF: swap the textarea for a file dropzone when this source is selected; for JSON: keep the textarea.
+- On import, save via `bloodPanelApi.create({ source: 'apple_health', ... })` and run `analyzeBloodPanel`.
+
+**Comparison**:
+- `BloodPanelDetail` and Health page already iterate on markers; just label the source badge so users can see "Apple Health" vs "Rythm" side by side.
+- No new compare UI in this pass — mixing sources by date already works because both share the marker schema. (Follow-up: same-marker overlay chart.)
+
+**Optional Apple Health bulk vitals import**: same Admin tab also accepts an Apple Health export for vitals (SpO2, BP, steps, sleep, RR, body temp, waist). This populates `DailyLog.vitals` for the days present. Implemented as a second source `apple_health_vitals` so labs and vitals stay separate.
+
+---
+
+## File touch-list
+
+**New**
+- `src/components/daily/DailyVitalsPanel.tsx`
+- `src/lib/importers/applehealth-labs.ts`
+- `src/lib/importers/applehealth-vitals.ts` (optional bulk vitals)
+
+**Edited**
+- `src/lib/api/types.ts` — `SessionMetrics`, `WorkoutSession.kind`, `DailyVitals`, `DailyLog.vitals`, `BloodPanelSource`
+- `src/lib/api/client.ts` — `dailyLogApi.updateVitals`, `bloodPanelApi.create` accepts `apple_health` source
+- `src/lib/api/index.ts` — re-exports
+- `src/lib/importers/index.ts` — exports
+- `src/hooks/use-api-queries.ts` — `useUpdateDailyVitals`
+- `src/components/SessionsTab.tsx` — kind toggle + cardio fields in edit dialog and card pills
+- `src/pages/SessionDetail.tsx` — show cardio metrics
+- `src/pages/Today.tsx` — mount `DailyVitalsPanel`
+- `src/pages/Admin.tsx` — `apple_health_labs` (+ optional `apple_health_vitals`) sources, file input branch
+- `src/components/BloodPanelDetail.tsx` — render source badge
+
+**Dependency**: `pdfjs-dist` for client-side PDF text extraction (only loaded on the Admin Imports tab).
+
+---
+
+## Open question (1)
+
+Apple Health PDF lab exports vary per provider. For this pass I default to a generic regex that recognizes the common `Marker  Value  Unit  Range` pattern and surfaces unparsed lines as warnings the user can paste into the JSON path instead. If you want provider-specific parsers (Quest, LabCorp, Apple Health Records native PDF), name them and I'll add tailored extractors.
