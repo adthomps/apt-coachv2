@@ -120,6 +120,19 @@ const Admin: React.FC = () => {
   const createBloodPanel = useCreateBloodPanel();
   const analyzeSnapshot = useAnalyzeSnapshot();
   const analyzeBloodPanel = useAnalyzeBloodPanel();
+  const bulkCreateCheckins = useBulkCreateHealthCheckins();
+
+  const parseCheckin = (src: ImportSource, text: string) => {
+    switch (src) {
+      case 'withings_scale': return parseWithingsScaleCsv(text);
+      case 'withings_bpm': return parseWithingsBpmCsv(text);
+      case 'withings_beamo': return parseWithingsBeamoJson(text);
+      case 'skulpt_chisel': return parseSkulptJson(text);
+      case 'lumen': return parseLumenJson(text);
+      case 'apple_health_vitals': return parseAppleHealthVitalsJson(text);
+      default: return { data: null, errors: ['Unsupported source'], warnings: [] } as const;
+    }
+  };
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [source, setSource] = useState<ImportSource>(initialSource);
