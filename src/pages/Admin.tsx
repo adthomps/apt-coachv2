@@ -25,7 +25,7 @@ import type { ImportType, ImportPreview } from '@/lib/api';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/hooks/use-api-queries';
-import { parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson } from '@/lib/importers';
+import { parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson, parseAppleHealthLabsJson, parseAppleHealthLabsPdfText, extractPdfText } from '@/lib/importers';
 import { toast } from '@/hooks/use-toast';
 
 type ImportSource =
