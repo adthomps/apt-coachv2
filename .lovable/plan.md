@@ -1,142 +1,115 @@
 ## Goal
 
-Bring Apple Health–style data into APT in three coordinated places, each chosen to match how the data is naturally produced:
+Treat DEXA (BodySpec) and Rythm Health as **ground truth** (monthly/quarterly). Treat Withings, Skulpt, Apple Health, Lumen as **daily/check-in context** that overlays — never overrides — the ground-truth values used by nutrition/protocol math.
 
-1. **Workout sessions** → expand `SessionMetrics` (cardio + HR detail).
-2. **Daily vitals** → new daily-keyed record edited inline on `/today` and bulk-importable.
-3. **Lab results** → Apple Health PDF/JSON importer that lands in the same `BloodPanel` store as RythmHealth so they can be compared side-by-side.
+## Verify pass on existing sources (no behavior change unless broken)
 
-No backend changes — extends the mock API layer and types; everything is local-first per existing patterns.
+- `src/lib/importers/bodyspec.ts` — kg/lbs auto-convert, regional + bone density still surfaced. Confirm Snapshot is the only writer of body-comp baseline used by `nutrition-targets.ts`.
+- `src/lib/importers/rythmhealth.ts` + Apple Health labs importer — confirm both write `BloodPanel` with correct `source` and that `BloodPanelDetail.tsx` shows a source badge.
+- Add a small "source of truth" legend to `/health` so the hierarchy is visible.
 
----
+## New data model (additive, in `src/lib/api/types.ts`)
 
-## 1. Session metrics (edit on existing Sessions tab)
-
-Already partially in place (`activeCalories`, `totalCalories`, `avgHeartRate`, `rpe`). Add cardio fields and a kind flag.
-
-**Where**: `src/components/SessionsTab.tsx` edit dialog + `src/pages/SessionDetail.tsx`. No new page — Apple Health workout data is most naturally tied to a session.
-
-**Type changes** (`src/lib/api/types.ts`):
 ```ts
-export type SessionKind = 'strength' | 'cardio' | 'mixed';
+export type HealthSourceId =
+  | 'bodyspec' | 'rythmhealth'
+  | 'withings_scale' | 'withings_bpm' | 'withings_beamo'
+  | 'skulpt_chisel' | 'apple_health' | 'lumen';
 
-export interface SessionMetrics {
-  activeCalories?: number;
-  totalCalories?: number;
-  avgHeartRate?: number;
-  maxHeartRate?: number;       // new
-  rpe?: number;
-  // cardio-only
-  distanceMiles?: number;       // new
-  avgPaceSecPerMile?: number;   // new (stored numeric, rendered mm:ss)
-  elevationGainFt?: number;     // new (optional bonus)
-}
+export type HealthSourceTier = 'truth' | 'context'; // bodyspec/rythm = truth, rest = context
 
-// WorkoutSession gets:
-kind?: SessionKind;             // defaults 'strength'
-```
-
-**UI**:
-- Edit dialog gains a "Session kind" toggle. When `cardio` or `mixed`, reveal Distance + Avg pace inputs.
-- Session card body shows pace + distance pills when present.
-- `SessionDetail` summary row mirrors the same fields.
-
----
-
-## 2. Daily vitals (new section on `/today`)
-
-These are once-per-day point readings, not session-bound, so they belong on the daily log.
-
-**Type changes**:
-```ts
-export interface DailyVitals {
-  bloodOxygenPct?: number;          // SpO2
+export interface HealthCheckin {
+  id: string;
+  date: string;            // YYYY-MM-DD
+  source: HealthSourceId;
+  tier: HealthSourceTier;  // always 'context' for new sources
+  // Body composition (Withings Scale, Skulpt)
+  weightLbs?: number;
+  bodyFatPct?: number;
+  leanMassLbs?: number;
+  visceralFat?: number;
+  waterPct?: number;
+  muscleQualityMQ?: number;       // Skulpt Chisel
+  regionalMQ?: { region: string; mq: number; bodyFatPct?: number }[];
+  // Vitals (Withings BPM / BeamO / Apple Health)
   systolicMmHg?: number;
   diastolicMmHg?: number;
+  pulseBpm?: number;
   bodyTempF?: number;
-  respiratoryRateBrpm?: number;
-  sleepScore?: number;              // 0–100
-  sleepHours?: number;
-  stepsCount?: number;
-  waistCircumferenceIn?: number;
-  restingHeartRate?: number;
+  bloodOxygenPct?: number;
+  ecgRhythm?: 'normal' | 'afib' | 'inconclusive';
+  stethoscopeNotes?: string;       // BeamO
+  // Metabolic (Lumen)
+  lumenLevel?: 1 | 2 | 3 | 4 | 5;  // 1 fat-burn → 5 carb-burn
+  morningLumenLevel?: 1 | 2 | 3 | 4 | 5;
+  metabolicFlexScore?: number;
+  rawJson?: string;
   notes?: string;
+  createdAt: string;
 }
 
-// DailyLog gets:
-vitals?: DailyVitals;
+export const HEALTH_SOURCE_META: Record<HealthSourceId, {
+  label: string; tier: HealthSourceTier; cadence: 'monthly'|'weekly'|'daily'|'on_demand';
+}>;
 ```
 
-**API** (`src/lib/api/client.ts`): extend `dailyLogApi` with `updateVitals(date, vitals)` that merges into the day's log.
+`DailyLog.vitals` (already exists) stays the canonical place for *manually entered* daily vitals on `/today`. `HealthCheckin` is for *device-imported* records that may be many per day and need source attribution for overlays.
 
-**Hook**: `useUpdateDailyVitals()` mirroring `useLogWeight`.
+## API + hooks
 
-**UI** — new component `src/components/daily/DailyVitalsPanel.tsx`:
-- Collapsible card placed on `/today` between the Meals section and `DailyTrainingCard`.
-- Compact grid of inline numeric inputs grouped:
-  - **Cardiovascular**: Resting HR, BP (systolic/diastolic), Blood Oxygen
-  - **Recovery**: Sleep score, Sleep hours, Respiratory rate, Body temp
-  - **Activity**: Steps
-  - **Body**: Waist circumference (also fed into trend display next to morning weight)
-- Empty fields render a subtle "—" placeholder; saving on blur, same UX as the morning weight input.
-- Today header: small "Vitals: 3/9 logged" hint chip linking to the panel.
+- `src/lib/api/client.ts`: add `healthCheckinApi` (`list({source?, from?, to?})`, `create`, `delete`, `bulkCreate`).
+- `src/hooks/use-api-queries.ts`: `useHealthCheckins`, `useCreateHealthCheckin`, `useBulkImportHealthCheckins`.
+- Mock data: seed a couple of recent Withings + Lumen entries so the UI isn't empty.
 
-**Why on /today and not Sessions**: SpO2, BP, sleep, steps, etc. are not workout-bound and are entered/imported daily.
+## Importers (`src/lib/importers/`)
 
----
+| File | Inputs | Output |
+|------|--------|--------|
+| `withings-scale.ts` | Withings CSV export (`weight.csv`, `body.csv`) | `HealthCheckin[]` (weight, BF%, lean, visceral, water) |
+| `withings-bpm.ts` | Withings BP CSV | `HealthCheckin[]` (systolic/diastolic/pulse) |
+| `withings-beamo.ts` | Stub: manual-entry form + JSON dropzone | `HealthCheckin[]` (temp, SpO2, ECG, steth notes) — marked **beta** until sample provided |
+| `skulpt-chisel.ts` | Skulpt JSON/CSV (manual paste — app is discontinued, no API) | `HealthCheckin` with `regionalMQ[]` |
+| `lumen.ts` | Stub matching documented Lumen export shape | `HealthCheckin[]` with morning + daily Lumen level — marked **beta** until sample provided |
+| `applehealth-vitals.ts` | Apple Health export.zip → already-extracted JSON of HKQuantityTypeIdentifier records | `HealthCheckin[]` for SpO2/BP/temp/RHR/steps |
 
-## 3. Apple Health labs import (PDF + JSON)
+All return the existing `ImporterResult<T>` shape; surface unknown rows as warnings.
 
-Apple Health Records can export lab results as PDF (provider summary) or as Health export `export.xml` / FHIR JSON. We support both via a new importer that produces a `BloodPanel` with `source: 'apple_health'`, so RythmHealth and Apple Health labs live in the same comparison view.
+## UI
 
-**Type changes**:
-```ts
-export type BloodPanelSource = 'rythmhealth' | 'apple_health';
-// BloodPanel.source widens to BloodPanelSource
-// add optional rawPdfText?: string and rawJson?: string alongside rawCsv
-```
+- **`/health` (Health hub, refactor)**: top section = "Ground truth" (DEXA card + Rythm card with last-scan dates and CTA). Below = "Daily context" grid: one card per source with last sync, latest values, sparkline, "Import" button. Legend explains overlay rule.
+- **DEXA detail / `Snapshot` view**: add overlay toggles ("Show Withings", "Show Skulpt") that draw lighter lines on the body-comp trend chart. Overlays are read-only annotations.
+- **Blood panel detail**: add overlay rail of recent BPM + BeamO vitals around the panel date for context.
+- **`/today`** (existing `DailyVitalsPanel`): add a small "Imported today from Withings / Apple Health / Lumen" chip set so manual entry doesn't double-up.
+- **Admin tab**: new "Daily devices" section grouping importers for the new sources, with a per-source dropzone/textarea and a preview table before commit.
 
-**New importer** `src/lib/importers/applehealth-labs.ts`:
-- `parseAppleHealthLabsJson(text)` — accepts FHIR `Observation` bundle or Apple Health export JSON; maps LOINC codes / display names to our marker names; computes `status` from referenceRange when available, otherwise `'average'`.
-- `parseAppleHealthLabsPdf(file)` — runs the PDF through a lightweight client-side text extractor (`pdfjs-dist`, already a viable browser dep) and a regex pass that finds rows of `marker  value  unit  reference`. Returns the same normalized result with warnings for any rows it could not parse.
-- Exported via `src/lib/importers/index.ts` next to existing parsers.
+## Files
 
-**Admin Imports tab** (`src/pages/Admin.tsx`):
-- Add source `apple_health_labs` with label "Apple Health Labs (PDF or JSON)".
-- For PDF: swap the textarea for a file dropzone when this source is selected; for JSON: keep the textarea.
-- On import, save via `bloodPanelApi.create({ source: 'apple_health', ... })` and run `analyzeBloodPanel`.
-
-**Comparison**:
-- `BloodPanelDetail` and Health page already iterate on markers; just label the source badge so users can see "Apple Health" vs "Rythm" side by side.
-- No new compare UI in this pass — mixing sources by date already works because both share the marker schema. (Follow-up: same-marker overlay chart.)
-
-**Optional Apple Health bulk vitals import**: same Admin tab also accepts an Apple Health export for vitals (SpO2, BP, steps, sleep, RR, body temp, waist). This populates `DailyLog.vitals` for the days present. Implemented as a second source `apple_health_vitals` so labs and vitals stay separate.
-
----
-
-## File touch-list
-
-**New**
-- `src/components/daily/DailyVitalsPanel.tsx`
-- `src/lib/importers/applehealth-labs.ts`
-- `src/lib/importers/applehealth-vitals.ts` (optional bulk vitals)
+**Created**
+- `src/lib/importers/withings-scale.ts`
+- `src/lib/importers/withings-bpm.ts`
+- `src/lib/importers/withings-beamo.ts` (beta)
+- `src/lib/importers/skulpt-chisel.ts`
+- `src/lib/importers/lumen.ts` (beta)
+- `src/lib/importers/applehealth-vitals.ts`
+- `src/components/health/HealthSourceCard.tsx`
+- `src/components/health/SourceOverlayToggle.tsx`
+- `src/components/health/GroundTruthLegend.tsx`
 
 **Edited**
-- `src/lib/api/types.ts` — `SessionMetrics`, `WorkoutSession.kind`, `DailyVitals`, `DailyLog.vitals`, `BloodPanelSource`
-- `src/lib/api/client.ts` — `dailyLogApi.updateVitals`, `bloodPanelApi.create` accepts `apple_health` source
-- `src/lib/api/index.ts` — re-exports
-- `src/lib/importers/index.ts` — exports
-- `src/hooks/use-api-queries.ts` — `useUpdateDailyVitals`
-- `src/components/SessionsTab.tsx` — kind toggle + cardio fields in edit dialog and card pills
-- `src/pages/SessionDetail.tsx` — show cardio metrics
-- `src/pages/Today.tsx` — mount `DailyVitalsPanel`
-- `src/pages/Admin.tsx` — `apple_health_labs` (+ optional `apple_health_vitals`) sources, file input branch
-- `src/components/BloodPanelDetail.tsx` — render source badge
+- `src/lib/api/types.ts`, `src/lib/api/client.ts`, `src/lib/api/mock-data.ts`, `src/lib/api/index.ts`
+- `src/lib/importers/index.ts`
+- `src/hooks/use-api-queries.ts`
+- `src/pages/Health.tsx`, `src/pages/Admin.tsx`
+- `src/components/BloodPanelDetail.tsx`
+- `src/components/daily/DailyVitalsPanel.tsx`
+- `.lovable/memory/index.md` (add HealthCheckin + source tiers)
 
-**Dependency**: `pdfjs-dist` for client-side PDF text extraction (only loaded on the Admin Imports tab).
+## Out of scope (this pass)
 
----
+- Real OAuth to Withings / Apple Health / Lumen APIs (would need Lovable Cloud + per-user OAuth). All importers stay file/paste-based.
+- BeamO + Lumen parsers will land as stubs with a TODO until you upload sample exports — they'll still accept manual entry today.
+- No changes to nutrition math: only DEXA-derived `BodyComposition` continues to feed `nutrition-targets.ts`.
 
-## Open question (1)
+## Open question (won't block — sane defaults applied)
 
-Apple Health PDF lab exports vary per provider. For this pass I default to a generic regex that recognizes the common `Marker  Value  Unit  Range` pattern and surfaces unparsed lines as warnings the user can paste into the JSON path instead. If you want provider-specific parsers (Quest, LabCorp, Apple Health Records native PDF), name them and I'll add tailored extractors.
+- For Withings Scale CSV, Withings exports use kg by default. I'll auto-convert and warn, same pattern as `bodyspec.ts`.
