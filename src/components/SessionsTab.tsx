@@ -277,7 +277,15 @@ const SessionsTab: React.FC = () => {
                       {s.metrics?.rpe !== undefined && (
                         <span className="inline-flex items-center gap-1"><Activity className="h-3 w-3" />RPE {s.metrics.rpe}</span>
                       )}
-                      {!s.metrics?.activeCalories && !s.metrics?.avgHeartRate && !s.metrics?.rpe && (
+                      {s.metrics?.distanceMiles !== undefined && (
+                        <span className="inline-flex items-center gap-1">{s.metrics.distanceMiles} mi</span>
+                      )}
+                      {s.metrics?.avgPaceSecPerMile !== undefined && (
+                        <span className="inline-flex items-center gap-1">
+                          {Math.floor(s.metrics.avgPaceSecPerMile / 60)}:{String(s.metrics.avgPaceSecPerMile % 60).padStart(2, '0')}/mi
+                        </span>
+                      )}
+                      {!s.metrics?.activeCalories && !s.metrics?.avgHeartRate && !s.metrics?.rpe && !s.metrics?.distanceMiles && (
                         <span className="italic">No wearable data</span>
                       )}
                     </div>
