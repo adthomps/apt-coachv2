@@ -487,11 +487,41 @@ export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
   snacks: 'Snacks',
 };
 
+export interface DailyVitals {
+  /** SpO2 percentage. */
+  bloodOxygenPct?: number;
+  systolicMmHg?: number;
+  diastolicMmHg?: number;
+  bodyTempF?: number;
+  respiratoryRateBrpm?: number;
+  /** Sleep score, 0–100. */
+  sleepScore?: number;
+  sleepHours?: number;
+  stepsCount?: number;
+  waistCircumferenceIn?: number;
+  restingHeartRate?: number;
+  notes?: string;
+}
+
+export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes'>, string> = {
+  bloodOxygenPct: 'Blood Oxygen (%)',
+  systolicMmHg: 'BP Systolic (mmHg)',
+  diastolicMmHg: 'BP Diastolic (mmHg)',
+  bodyTempF: 'Body Temp (°F)',
+  respiratoryRateBrpm: 'Respiratory Rate (brpm)',
+  sleepScore: 'Sleep Score',
+  sleepHours: 'Sleep (hrs)',
+  stepsCount: 'Steps',
+  waistCircumferenceIn: 'Waist (in)',
+  restingHeartRate: 'Resting HR (bpm)',
+};
+
 export interface DailyLog {
   id: string;
   date: string; // YYYY-MM-DD
   meals: Record<MealSlot, MealEntry[]>;
   bodyWeight?: number; // lbs
+  vitals?: DailyVitals;
   notes?: string;
 }
 
