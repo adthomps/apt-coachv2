@@ -413,6 +413,13 @@ export const dailyLogApi = {
     dailyLogs.set(date, log);
     return log;
   },
+  async updateVitals(date: string, vitals: DailyVitals): Promise<DailyLog> {
+    await delay(100);
+    const log = dailyLogs.get(date) ?? emptyLog(date);
+    log.vitals = { ...(log.vitals ?? {}), ...vitals };
+    dailyLogs.set(date, log);
+    return log;
+  },
 };
 
 // ============ Nutrition Goal API ============
