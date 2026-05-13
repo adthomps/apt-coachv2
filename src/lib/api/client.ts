@@ -15,7 +15,7 @@ import type {
   ExercisePerformanceProfile,
   AdaptiveRecommendation,
   BloodPanel,
-  DailyLog, MealEntry, MealSlot,
+  DailyLog, DailyVitals, MealEntry, MealSlot,
   NutritionGoal,
 } from './types';
 import {
