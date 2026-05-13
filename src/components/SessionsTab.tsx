@@ -75,10 +75,16 @@ const SessionsTab: React.FC = () => {
   const [startedAt, setStartedAt] = useState('');
   const [completedAt, setCompletedAt] = useState('');
   const [editStatus, setEditStatus] = useState<WorkoutSession['status']>('completed');
+  const [editKind, setEditKind] = useState<SessionKind>('strength');
   const [activeCalories, setActiveCalories] = useState('');
   const [totalCalories, setTotalCalories] = useState('');
   const [avgHeartRate, setAvgHeartRate] = useState('');
+  const [maxHeartRate, setMaxHeartRate] = useState('');
   const [rpe, setRpe] = useState('');
+  const [distanceMiles, setDistanceMiles] = useState('');
+  const [paceMin, setPaceMin] = useState('');
+  const [paceSec, setPaceSec] = useState('');
+  const [elevationGainFt, setElevationGainFt] = useState('');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -87,10 +93,17 @@ const SessionsTab: React.FC = () => {
     setStartedAt(fmtDateTimeLocal(s.startedAt));
     setCompletedAt(fmtDateTimeLocal(s.completedAt));
     setEditStatus(s.status);
+    setEditKind(s.kind ?? 'strength');
     setActiveCalories(s.metrics?.activeCalories?.toString() ?? '');
     setTotalCalories(s.metrics?.totalCalories?.toString() ?? '');
     setAvgHeartRate(s.metrics?.avgHeartRate?.toString() ?? '');
+    setMaxHeartRate(s.metrics?.maxHeartRate?.toString() ?? '');
     setRpe(s.metrics?.rpe?.toString() ?? '');
+    setDistanceMiles(s.metrics?.distanceMiles?.toString() ?? '');
+    const pace = s.metrics?.avgPaceSecPerMile;
+    setPaceMin(pace ? String(Math.floor(pace / 60)) : '');
+    setPaceSec(pace ? String(pace % 60) : '');
+    setElevationGainFt(s.metrics?.elevationGainFt?.toString() ?? '');
     setNotes(s.notes ?? '');
   };
 
