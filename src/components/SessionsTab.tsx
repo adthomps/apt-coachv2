@@ -352,6 +352,23 @@ const SessionsTab: React.FC = () => {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label>Session Kind</Label>
+          <div className="flex gap-2">
+            {(Object.keys(SESSION_KIND_LABELS) as SessionKind[]).map((k) => (
+              <Button
+                key={k}
+                type="button"
+                size="sm"
+                variant={editKind === k ? 'default' : 'outline'}
+                onClick={() => setEditKind(k)}
+              >
+                {SESSION_KIND_LABELS[k]}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="se-ac"><Flame className="inline h-3 w-3 mr-1" />Active Calories</Label>
@@ -366,10 +383,38 @@ const SessionsTab: React.FC = () => {
             <Input id="se-hr" type="number" min="0" value={avgHeartRate} onChange={(e) => setAvgHeartRate(e.target.value)} />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="se-mhr"><Heart className="inline h-3 w-3 mr-1" />Max Heart Rate</Label>
+            <Input id="se-mhr" type="number" min="0" value={maxHeartRate} onChange={(e) => setMaxHeartRate(e.target.value)} />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="se-rpe"><Activity className="inline h-3 w-3 mr-1" />RPE (1–10)</Label>
             <Input id="se-rpe" type="number" min="1" max="10" step="0.5" value={rpe} onChange={(e) => setRpe(e.target.value)} />
           </div>
         </div>
+
+        {(editKind === 'cardio' || editKind === 'mixed') && (
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Cardio Metrics</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="se-dist">Distance (mi)</Label>
+                <Input id="se-dist" type="number" min="0" step="0.01" value={distanceMiles} onChange={(e) => setDistanceMiles(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Avg Pace (per mile)</Label>
+                <div className="flex items-center gap-1">
+                  <Input type="number" min="0" placeholder="min" value={paceMin} onChange={(e) => setPaceMin(e.target.value)} className="w-20" />
+                  <span className="text-muted-foreground">:</span>
+                  <Input type="number" min="0" max="59" placeholder="sec" value={paceSec} onChange={(e) => setPaceSec(e.target.value)} className="w-20" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="se-elev">Elevation Gain (ft)</Label>
+                <Input id="se-elev" type="number" min="0" value={elevationGainFt} onChange={(e) => setElevationGainFt(e.target.value)} />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="se-notes">Notes</Label>
