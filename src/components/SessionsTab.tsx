@@ -125,17 +125,23 @@ const SessionsTab: React.FC = () => {
     if (!editing) return;
     setIsSaving(true);
     try {
+      const paceTotal = (paceMin ? Number(paceMin) * 60 : 0) + (paceSec ? Number(paceSec) : 0);
       const metrics: SessionMetrics = {
         activeCalories: activeCalories ? Number(activeCalories) : undefined,
         totalCalories: totalCalories ? Number(totalCalories) : undefined,
         avgHeartRate: avgHeartRate ? Number(avgHeartRate) : undefined,
+        maxHeartRate: maxHeartRate ? Number(maxHeartRate) : undefined,
         rpe: rpe ? Number(rpe) : undefined,
+        distanceMiles: distanceMiles ? Number(distanceMiles) : undefined,
+        avgPaceSecPerMile: paceTotal > 0 ? paceTotal : undefined,
+        elevationGainFt: elevationGainFt ? Number(elevationGainFt) : undefined,
       };
       const wasAbandoned = editing.status === 'abandoned';
       await updateSession.mutateAsync({
         id: editing.id,
         input: {
           status: editStatus,
+          kind: editKind,
           startedAt: startedAt ? fromLocal(startedAt) : editing.startedAt,
           completedAt: completedAt ? fromLocal(completedAt) : undefined,
           metrics,
