@@ -9,6 +9,7 @@ import DailyTrainingCard from '@/components/daily/DailyTrainingCard';
 import DailySignals from '@/components/daily/DailySignals';
 import MetricExplainer from '@/components/health/MetricExplainer';
 import NutritionTargetsPanel from '@/components/daily/NutritionTargetsPanel';
+import DailyVitalsPanel from '@/components/daily/DailyVitalsPanel';
 import { Input } from '@/components/ui/input';
 import { useDailyLog, useAddMeal, useDeleteMeal, useLogWeight, useSnapshots, useSchedule, useSessions, useActiveNutritionGoal } from '@/hooks/use-api-queries';
 import { computeNutritionTargets, defaultTargets } from '@/lib/nutrition-targets';
@@ -151,6 +152,9 @@ const Today: React.FC = () => {
             ))}
           </div>
         </SectionCard>
+
+        {/* Daily Vitals */}
+        <DailyVitalsPanel date={date} vitals={log?.vitals} />
 
         {/* Today's Training */}
         <DailyTrainingCard todayEntry={todayEntry} todaySession={todaySession} />

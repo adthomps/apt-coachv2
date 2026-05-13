@@ -301,6 +301,14 @@ export interface SessionExerciseLog {
   notes?: string;
 }
 
+export type SessionKind = 'strength' | 'cardio' | 'mixed';
+
+export const SESSION_KIND_LABELS: Record<SessionKind, string> = {
+  strength: 'Strength',
+  cardio: 'Cardio',
+  mixed: 'Mixed',
+};
+
 export interface SessionMetrics {
   /** Active calories from a wearable (e.g. Apple Health). */
   activeCalories?: number;
@@ -308,8 +316,16 @@ export interface SessionMetrics {
   totalCalories?: number;
   /** Average heart rate (bpm). */
   avgHeartRate?: number;
+  /** Peak heart rate (bpm). */
+  maxHeartRate?: number;
   /** Subjective Rate of Perceived Exertion 1–10. */
   rpe?: number;
+  /** Cardio: distance covered (miles). */
+  distanceMiles?: number;
+  /** Cardio: average pace (seconds per mile). */
+  avgPaceSecPerMile?: number;
+  /** Cardio: elevation gain (feet). */
+  elevationGainFt?: number;
 }
 
 export interface WorkoutSession {
@@ -317,6 +333,8 @@ export interface WorkoutSession {
   workoutId: string;
   workoutName: string;
   programId?: string;
+  /** Strength, cardio, or mixed — affects which metrics are surfaced. */
+  kind?: SessionKind;
   status: 'in_progress' | 'completed' | 'abandoned';
   /** ISO timestamp the session was started. */
   startedAt: string;
@@ -414,12 +432,21 @@ export interface BloodMarker {
   time: string;
 }
 
+export type BloodPanelSource = 'rythmhealth' | 'apple_health';
+
+export const BLOOD_PANEL_SOURCE_LABELS: Record<BloodPanelSource, string> = {
+  rythmhealth: 'Rythm',
+  apple_health: 'Apple Health',
+};
+
 export interface BloodPanel {
   id: string;
-  source: 'rythmhealth';
+  source: BloodPanelSource;
   panelDate: string;
   markers: BloodMarker[];
   rawCsv?: string;
+  rawJson?: string;
+  rawPdfText?: string;
   notes?: string;
   createdAt: string;
 }
@@ -460,11 +487,41 @@ export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
   snacks: 'Snacks',
 };
 
+export interface DailyVitals {
+  /** SpO2 percentage. */
+  bloodOxygenPct?: number;
+  systolicMmHg?: number;
+  diastolicMmHg?: number;
+  bodyTempF?: number;
+  respiratoryRateBrpm?: number;
+  /** Sleep score, 0–100. */
+  sleepScore?: number;
+  sleepHours?: number;
+  stepsCount?: number;
+  waistCircumferenceIn?: number;
+  restingHeartRate?: number;
+  notes?: string;
+}
+
+export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes'>, string> = {
+  bloodOxygenPct: 'Blood Oxygen (%)',
+  systolicMmHg: 'BP Systolic (mmHg)',
+  diastolicMmHg: 'BP Diastolic (mmHg)',
+  bodyTempF: 'Body Temp (°F)',
+  respiratoryRateBrpm: 'Respiratory Rate (brpm)',
+  sleepScore: 'Sleep Score',
+  sleepHours: 'Sleep (hrs)',
+  stepsCount: 'Steps',
+  waistCircumferenceIn: 'Waist (in)',
+  restingHeartRate: 'Resting HR (bpm)',
+};
+
 export interface DailyLog {
   id: string;
   date: string; // YYYY-MM-DD
   meals: Record<MealSlot, MealEntry[]>;
   bodyWeight?: number; // lbs
+  vitals?: DailyVitals;
   notes?: string;
 }
 

@@ -12,6 +12,8 @@ export interface ImporterResult<T> {
 
 export type { BodyspecResult } from './bodyspec';
 export type { RythmHealthResult } from './rythmhealth';
+export type { AppleHealthLabsResult } from './applehealth-labs';
 export { parseBodyspecJson } from './bodyspec';
 export { parseRythmHealthCsv } from './rythmhealth';
+export { parseAppleHealthLabsJson, parseAppleHealthLabsPdfText, extractPdfText } from './applehealth-labs';
 export { parseEntityArrayJson } from './generic';

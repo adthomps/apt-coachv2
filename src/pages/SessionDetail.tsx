@@ -288,8 +288,12 @@ const SessionDetail: React.FC = () => {
             />
             <Metric
               icon={<Heart className="h-4 w-4" />}
-              label="Avg Heart Rate"
-              value={session.metrics?.avgHeartRate ? `${session.metrics.avgHeartRate} BPM` : '—'}
+              label="Avg / Max HR"
+              value={
+                session.metrics?.avgHeartRate
+                  ? `${session.metrics.avgHeartRate}${session.metrics.maxHeartRate ? ` / ${session.metrics.maxHeartRate}` : ''} BPM`
+                  : '—'
+              }
             />
             <Metric
               icon={<Activity className="h-4 w-4" />}
@@ -297,6 +301,29 @@ const SessionDetail: React.FC = () => {
               value={session.metrics?.rpe ? `${session.metrics.rpe}/10` : '—'}
             />
           </div>
+          {(session.kind === 'cardio' || session.kind === 'mixed') && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+              <Metric
+                icon={<Activity className="h-4 w-4" />}
+                label="Distance"
+                value={session.metrics?.distanceMiles ? `${session.metrics.distanceMiles} mi` : '—'}
+              />
+              <Metric
+                icon={<Clock className="h-4 w-4" />}
+                label="Avg Pace"
+                value={
+                  session.metrics?.avgPaceSecPerMile
+                    ? `${Math.floor(session.metrics.avgPaceSecPerMile / 60)}:${String(session.metrics.avgPaceSecPerMile % 60).padStart(2, '0')} /mi`
+                    : '—'
+                }
+              />
+              <Metric
+                icon={<TrendingUp className="h-4 w-4" />}
+                label="Elevation Gain"
+                value={session.metrics?.elevationGainFt ? `${session.metrics.elevationGainFt} ft` : '—'}
+              />
+            </div>
+          )}
           {session.notes && (
             <div className="mt-4 rounded-lg border border-border p-3 text-sm text-muted-foreground italic">
               “{session.notes}”

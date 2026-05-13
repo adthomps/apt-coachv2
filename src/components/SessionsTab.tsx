@@ -26,7 +26,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { computeSessionSnapshot } from '@/lib/ai/session-insights';
 import { shiftScheduleForSession } from '@/lib/schedule-sync';
-import type { SessionMetrics, WorkoutSession } from '@/lib/api/types';
+import type { SessionKind, SessionMetrics, WorkoutSession } from '@/lib/api/types';
+import { SESSION_KIND_LABELS } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
 const fmtDateTimeLocal = (iso?: string) => {
@@ -74,10 +75,16 @@ const SessionsTab: React.FC = () => {
   const [startedAt, setStartedAt] = useState('');
   const [completedAt, setCompletedAt] = useState('');
   const [editStatus, setEditStatus] = useState<WorkoutSession['status']>('completed');
+  const [editKind, setEditKind] = useState<SessionKind>('strength');
   const [activeCalories, setActiveCalories] = useState('');
   const [totalCalories, setTotalCalories] = useState('');
   const [avgHeartRate, setAvgHeartRate] = useState('');
+  const [maxHeartRate, setMaxHeartRate] = useState('');
   const [rpe, setRpe] = useState('');
+  const [distanceMiles, setDistanceMiles] = useState('');
+  const [paceMin, setPaceMin] = useState('');
+  const [paceSec, setPaceSec] = useState('');
+  const [elevationGainFt, setElevationGainFt] = useState('');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -86,10 +93,17 @@ const SessionsTab: React.FC = () => {
     setStartedAt(fmtDateTimeLocal(s.startedAt));
     setCompletedAt(fmtDateTimeLocal(s.completedAt));
     setEditStatus(s.status);
+    setEditKind(s.kind ?? 'strength');
     setActiveCalories(s.metrics?.activeCalories?.toString() ?? '');
     setTotalCalories(s.metrics?.totalCalories?.toString() ?? '');
     setAvgHeartRate(s.metrics?.avgHeartRate?.toString() ?? '');
+    setMaxHeartRate(s.metrics?.maxHeartRate?.toString() ?? '');
     setRpe(s.metrics?.rpe?.toString() ?? '');
+    setDistanceMiles(s.metrics?.distanceMiles?.toString() ?? '');
+    const pace = s.metrics?.avgPaceSecPerMile;
+    setPaceMin(pace ? String(Math.floor(pace / 60)) : '');
+    setPaceSec(pace ? String(pace % 60) : '');
+    setElevationGainFt(s.metrics?.elevationGainFt?.toString() ?? '');
     setNotes(s.notes ?? '');
   };
 
@@ -111,17 +125,23 @@ const SessionsTab: React.FC = () => {
     if (!editing) return;
     setIsSaving(true);
     try {
+      const paceTotal = (paceMin ? Number(paceMin) * 60 : 0) + (paceSec ? Number(paceSec) : 0);
       const metrics: SessionMetrics = {
         activeCalories: activeCalories ? Number(activeCalories) : undefined,
         totalCalories: totalCalories ? Number(totalCalories) : undefined,
         avgHeartRate: avgHeartRate ? Number(avgHeartRate) : undefined,
+        maxHeartRate: maxHeartRate ? Number(maxHeartRate) : undefined,
         rpe: rpe ? Number(rpe) : undefined,
+        distanceMiles: distanceMiles ? Number(distanceMiles) : undefined,
+        avgPaceSecPerMile: paceTotal > 0 ? paceTotal : undefined,
+        elevationGainFt: elevationGainFt ? Number(elevationGainFt) : undefined,
       };
       const wasAbandoned = editing.status === 'abandoned';
       await updateSession.mutateAsync({
         id: editing.id,
         input: {
           status: editStatus,
+          kind: editKind,
           startedAt: startedAt ? fromLocal(startedAt) : editing.startedAt,
           completedAt: completedAt ? fromLocal(completedAt) : undefined,
           metrics,
@@ -257,7 +277,15 @@ const SessionsTab: React.FC = () => {
                       {s.metrics?.rpe !== undefined && (
                         <span className="inline-flex items-center gap-1"><Activity className="h-3 w-3" />RPE {s.metrics.rpe}</span>
                       )}
-                      {!s.metrics?.activeCalories && !s.metrics?.avgHeartRate && !s.metrics?.rpe && (
+                      {s.metrics?.distanceMiles !== undefined && (
+                        <span className="inline-flex items-center gap-1">{s.metrics.distanceMiles} mi</span>
+                      )}
+                      {s.metrics?.avgPaceSecPerMile !== undefined && (
+                        <span className="inline-flex items-center gap-1">
+                          {Math.floor(s.metrics.avgPaceSecPerMile / 60)}:{String(s.metrics.avgPaceSecPerMile % 60).padStart(2, '0')}/mi
+                        </span>
+                      )}
+                      {!s.metrics?.activeCalories && !s.metrics?.avgHeartRate && !s.metrics?.rpe && !s.metrics?.distanceMiles && (
                         <span className="italic">No wearable data</span>
                       )}
                     </div>
@@ -332,6 +360,23 @@ const SessionsTab: React.FC = () => {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label>Session Kind</Label>
+          <div className="flex gap-2">
+            {(Object.keys(SESSION_KIND_LABELS) as SessionKind[]).map((k) => (
+              <Button
+                key={k}
+                type="button"
+                size="sm"
+                variant={editKind === k ? 'default' : 'outline'}
+                onClick={() => setEditKind(k)}
+              >
+                {SESSION_KIND_LABELS[k]}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="se-ac"><Flame className="inline h-3 w-3 mr-1" />Active Calories</Label>
@@ -346,10 +391,38 @@ const SessionsTab: React.FC = () => {
             <Input id="se-hr" type="number" min="0" value={avgHeartRate} onChange={(e) => setAvgHeartRate(e.target.value)} />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="se-mhr"><Heart className="inline h-3 w-3 mr-1" />Max Heart Rate</Label>
+            <Input id="se-mhr" type="number" min="0" value={maxHeartRate} onChange={(e) => setMaxHeartRate(e.target.value)} />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="se-rpe"><Activity className="inline h-3 w-3 mr-1" />RPE (1–10)</Label>
             <Input id="se-rpe" type="number" min="1" max="10" step="0.5" value={rpe} onChange={(e) => setRpe(e.target.value)} />
           </div>
         </div>
+
+        {(editKind === 'cardio' || editKind === 'mixed') && (
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Cardio Metrics</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="se-dist">Distance (mi)</Label>
+                <Input id="se-dist" type="number" min="0" step="0.01" value={distanceMiles} onChange={(e) => setDistanceMiles(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Avg Pace (per mile)</Label>
+                <div className="flex items-center gap-1">
+                  <Input type="number" min="0" placeholder="min" value={paceMin} onChange={(e) => setPaceMin(e.target.value)} className="w-20" />
+                  <span className="text-muted-foreground">:</span>
+                  <Input type="number" min="0" max="59" placeholder="sec" value={paceSec} onChange={(e) => setPaceSec(e.target.value)} className="w-20" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="se-elev">Elevation Gain (ft)</Label>
+                <Input id="se-elev" type="number" min="0" value={elevationGainFt} onChange={(e) => setElevationGainFt(e.target.value)} />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="se-notes">Notes</Label>

@@ -25,12 +25,13 @@ import type { ImportType, ImportPreview } from '@/lib/api';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/hooks/use-api-queries';
-import { parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson } from '@/lib/importers';
+import { parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson, parseAppleHealthLabsJson, parseAppleHealthLabsPdfText, extractPdfText } from '@/lib/importers';
 import { toast } from '@/hooks/use-toast';
 
 type ImportSource =
   | 'body_scan'
   | 'blood_panel'
+  | 'apple_health_labs'
   | 'exercise_library'
   | 'workouts'
   | 'programs';
@@ -38,6 +39,7 @@ type ImportSource =
 const SOURCE_LABELS: Record<ImportSource, string> = {
   body_scan: 'Body Scan (BodySpec / DEXA)',
   blood_panel: 'Blood Panel (RythmHealth CSV)',
+  apple_health_labs: 'Apple Health Labs (PDF or FHIR JSON)',
   exercise_library: 'Exercises (JSON)',
   workouts: 'Workouts (JSON)',
   programs: 'Programs (JSON)',
@@ -49,6 +51,10 @@ const SAMPLE_DATA: Record<ImportSource, string> = {
     total_mass_lbs: 181.9, fat_mass_lbs: 30.9, lean_mass_lbs: 143.9, bone_mass_lbs: 7.1, body_fat_pct: 17.0,
   }, null, 2),
   blood_panel: 'marker,value,unit,reference_range,status,time\nFree T3,4.25,pg/mL,2 - 4.4,optimal,2026-03-09\nApoB,131,mg/dL,0 - 90,outOfRange,2026-03-09',
+  apple_health_labs: JSON.stringify([
+    { marker: 'ApoB', value: 95, unit: 'mg/dL', referenceRange: '0 - 90', time: '2026-04-01' },
+    { marker: 'HDL Cholesterol', value: 58, unit: 'mg/dL', referenceRange: '40 - 100', time: '2026-04-01' },
+  ], null, 2),
   exercise_library: JSON.stringify([{ name: 'Romanian Deadlift', movementPattern: 'hip_hinge', muscleGroups: ['hamstrings', 'glutes'], equipment: ['barbell'], difficulty: 'intermediate' }], null, 2),
   workouts: JSON.stringify([{ name: 'Upper Body Strength', difficulty: 'intermediate', estimatedDuration: 60, blocks: [] }], null, 2),
   programs: JSON.stringify([{ name: '8 Week Recomp', durationWeeks: 8, goal: 'recomposition', difficulty: 'intermediate' }], null, 2),
@@ -124,6 +130,21 @@ const Admin: React.FC = () => {
             isValid: true,
           });
         }
+      } else if (source === 'apple_health_labs') {
+        const result = parseAppleHealthLabsJson(rawText);
+        if (result.errors.length > 0) setErrors(result.errors);
+        if (result.warnings.length > 0) setWarnings(result.warnings);
+        if (result.data) {
+          setPreview({
+            type: 'snapshots', schemaVersion: '1.0', totalItems: result.data.panelInput.markers.length,
+            adds: result.data.panelInput.markers.length, updates: 0, skips: 0,
+            errors: result.data.outOfRangeCount,
+            items: result.data.panelInput.markers.map((m, i) => ({
+              index: i, action: 'add' as const, name: `${m.marker}: ${m.value} ${m.unit}`, data: m as unknown as Record<string, unknown>,
+            })),
+            isValid: true,
+          });
+        }
       } else {
         const result = parseEntityArrayJson(rawText);
         if (result.errors.length > 0) setErrors(result.errors);
@@ -160,6 +181,16 @@ const Admin: React.FC = () => {
           toast({ title: 'Blood panel imported', description: `${result.data.panelInput.markers.length} markers, ${recs.length} insight${recs.length !== 1 ? 's' : ''}.` });
         } catch {
           toast({ title: 'Blood panel imported' });
+        }
+      } else if (source === 'apple_health_labs') {
+        const result = parseAppleHealthLabsJson(rawText);
+        if (!result.data) throw new Error('Validation failed');
+        const saved = await createBloodPanel.mutateAsync(result.data.panelInput);
+        try {
+          const recs = await analyzeBloodPanel.mutateAsync(saved.id);
+          toast({ title: 'Apple Health labs imported', description: `${result.data.panelInput.markers.length} markers, ${recs.length} insight${recs.length !== 1 ? 's' : ''}.` });
+        } catch {
+          toast({ title: 'Apple Health labs imported' });
         }
       } else {
         const result = parseEntityArrayJson(rawText);
@@ -227,10 +258,52 @@ const Admin: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">{source === 'blood_panel' ? 'CSV Data' : 'JSON Data'}</label>
-                      <Button variant="ghost" size="sm" onClick={() => { setRawText(SAMPLE_DATA[source]); setPreview(null); setErrors([]); }}>
-                        Load Sample
-                      </Button>
+                      <label className="text-sm font-medium">
+                        {source === 'blood_panel' ? 'CSV Data' : source === 'apple_health_labs' ? 'PDF or JSON' : 'JSON Data'}
+                      </label>
+                      <div className="flex gap-2">
+                        {source === 'apple_health_labs' && (
+                          <label className="inline-flex items-center text-xs cursor-pointer text-primary hover:underline">
+                            <Upload className="h-3 w-3 mr-1" />Upload PDF
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setErrors([]); setWarnings([]); setPreview(null);
+                                try {
+                                  const text = await extractPdfText(file);
+                                  const result = parseAppleHealthLabsPdfText(text);
+                                  if (result.errors.length) setErrors(result.errors);
+                                  if (result.warnings.length) setWarnings(result.warnings);
+                                  if (result.data) {
+                                    setRawText(JSON.stringify(result.data.panelInput.markers, null, 2));
+                                    setPreview({
+                                      type: 'snapshots', schemaVersion: '1.0',
+                                      totalItems: result.data.panelInput.markers.length,
+                                      adds: result.data.panelInput.markers.length,
+                                      updates: 0, skips: 0, errors: result.data.outOfRangeCount,
+                                      items: result.data.panelInput.markers.map((m, i) => ({
+                                        index: i, action: 'add' as const,
+                                        name: `${m.marker}: ${m.value} ${m.unit}`,
+                                        data: m as unknown as Record<string, unknown>,
+                                      })),
+                                      isValid: true,
+                                    });
+                                  }
+                                } catch (err) {
+                                  setErrors([err instanceof Error ? err.message : 'PDF parsing failed']);
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => { setRawText(SAMPLE_DATA[source]); setPreview(null); setErrors([]); }}>
+                          Load Sample
+                        </Button>
+                      </div>
                     </div>
 
                     <Textarea

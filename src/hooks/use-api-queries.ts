@@ -9,7 +9,7 @@ import {
   scheduleApi, sessionApi, performanceApi, adaptiveApi, importApi, bloodPanelApi,
   dailyLogApi, nutritionGoalApi,
 } from '@/lib/api';
-import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal } from '@/lib/api/types';
+import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal, DailyVitals } from '@/lib/api/types';
 
 // ============ Query Keys ============
 
@@ -359,6 +359,15 @@ export function useLogWeight() {
   return useMutation({
     mutationFn: ({ date, weight }: { date: string; weight: number }) =>
       dailyLogApi.updateWeight(date, weight),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
+export function useUpdateDailyVitals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, vitals }: { date: string; vitals: DailyVitals }) =>
+      dailyLogApi.updateVitals(date, vitals),
     onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
   });
 }

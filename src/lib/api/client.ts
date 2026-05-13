@@ -15,7 +15,7 @@ import type {
   ExercisePerformanceProfile,
   AdaptiveRecommendation,
   BloodPanel,
-  DailyLog, MealEntry, MealSlot,
+  DailyLog, DailyVitals, MealEntry, MealSlot,
   NutritionGoal,
 } from './types';
 import {
@@ -249,7 +249,7 @@ export const sessionApi = {
     mockSessions.push(session);
     return session;
   },
-  async update(id: string, input: Partial<Pick<WorkoutSession, 'status' | 'notes' | 'completedAt' | 'startedAt' | 'metrics' | 'exercises'>>): Promise<WorkoutSession> {
+  async update(id: string, input: Partial<Pick<WorkoutSession, 'status' | 'notes' | 'completedAt' | 'startedAt' | 'metrics' | 'exercises' | 'kind'>>): Promise<WorkoutSession> {
     await delay(200);
     const i = mockSessions.findIndex(s => s.id === id);
     if (i === -1) throw new Error('Session not found');
@@ -410,6 +410,13 @@ export const dailyLogApi = {
     await delay(100);
     const log = dailyLogs.get(date) ?? emptyLog(date);
     log.bodyWeight = weight;
+    dailyLogs.set(date, log);
+    return log;
+  },
+  async updateVitals(date: string, vitals: DailyVitals): Promise<DailyLog> {
+    await delay(100);
+    const log = dailyLogs.get(date) ?? emptyLog(date);
+    log.vitals = { ...(log.vitals ?? {}), ...vitals };
     dailyLogs.set(date, log);
     return log;
   },
