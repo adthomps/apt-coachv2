@@ -249,7 +249,7 @@ export const sessionApi = {
     mockSessions.push(session);
     return session;
   },
-  async update(id: string, input: Partial<Pick<WorkoutSession, 'status' | 'notes' | 'completedAt' | 'startedAt' | 'metrics' | 'exercises'>>): Promise<WorkoutSession> {
+  async update(id: string, input: Partial<Pick<WorkoutSession, 'status' | 'notes' | 'completedAt' | 'startedAt' | 'metrics' | 'exercises' | 'kind'>>): Promise<WorkoutSession> {
     await delay(200);
     const i = mockSessions.findIndex(s => s.id === id);
     if (i === -1) throw new Error('Session not found');
