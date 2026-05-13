@@ -258,10 +258,52 @@ const Admin: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">{source === 'blood_panel' ? 'CSV Data' : 'JSON Data'}</label>
-                      <Button variant="ghost" size="sm" onClick={() => { setRawText(SAMPLE_DATA[source]); setPreview(null); setErrors([]); }}>
-                        Load Sample
-                      </Button>
+                      <label className="text-sm font-medium">
+                        {source === 'blood_panel' ? 'CSV Data' : source === 'apple_health_labs' ? 'PDF or JSON' : 'JSON Data'}
+                      </label>
+                      <div className="flex gap-2">
+                        {source === 'apple_health_labs' && (
+                          <label className="inline-flex items-center text-xs cursor-pointer text-primary hover:underline">
+                            <Upload className="h-3 w-3 mr-1" />Upload PDF
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setErrors([]); setWarnings([]); setPreview(null);
+                                try {
+                                  const text = await extractPdfText(file);
+                                  const result = parseAppleHealthLabsPdfText(text);
+                                  if (result.errors.length) setErrors(result.errors);
+                                  if (result.warnings.length) setWarnings(result.warnings);
+                                  if (result.data) {
+                                    setRawText(JSON.stringify(result.data.panelInput.markers, null, 2));
+                                    setPreview({
+                                      type: 'snapshots', schemaVersion: '1.0',
+                                      totalItems: result.data.panelInput.markers.length,
+                                      adds: result.data.panelInput.markers.length,
+                                      updates: 0, skips: 0, errors: result.data.outOfRangeCount,
+                                      items: result.data.panelInput.markers.map((m, i) => ({
+                                        index: i, action: 'add' as const,
+                                        name: `${m.marker}: ${m.value} ${m.unit}`,
+                                        data: m as unknown as Record<string, unknown>,
+                                      })),
+                                      isValid: true,
+                                    });
+                                  }
+                                } catch (err) {
+                                  setErrors([err instanceof Error ? err.message : 'PDF parsing failed']);
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => { setRawText(SAMPLE_DATA[source]); setPreview(null); setErrors([]); }}>
+                          Load Sample
+                        </Button>
+                      </div>
                     </div>
 
                     <Textarea
