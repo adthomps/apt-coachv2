@@ -363,6 +363,15 @@ export function useLogWeight() {
   });
 }
 
+export function useUpdateDailyVitals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, vitals }: { date: string; vitals: DailyVitals }) =>
+      dailyLogApi.updateVitals(date, vitals),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
 // ============ Nutrition Goal Hooks ============
 
 export function useNutritionGoals() {
