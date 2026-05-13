@@ -20,30 +20,52 @@ import {
 import {
   useImportJobs, useExercises, useWorkouts, usePrograms, useSnapshots, useBloodPanels,
   useCreateSnapshot, useCreateBloodPanel, useAnalyzeSnapshot, useAnalyzeBloodPanel,
+  useBulkCreateHealthCheckins,
 } from '@/hooks/use-api-queries';
 import type { ImportType, ImportPreview } from '@/lib/api';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/hooks/use-api-queries';
-import { parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson, parseAppleHealthLabsJson, parseAppleHealthLabsPdfText, extractPdfText } from '@/lib/importers';
+import {
+  parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson,
+  parseAppleHealthLabsJson, parseAppleHealthLabsPdfText, extractPdfText,
+  parseWithingsScaleCsv, parseWithingsBpmCsv, parseWithingsBeamoJson,
+  parseSkulptJson, parseLumenJson, parseAppleHealthVitalsJson,
+} from '@/lib/importers';
 import { toast } from '@/hooks/use-toast';
 
 type ImportSource =
   | 'body_scan'
   | 'blood_panel'
   | 'apple_health_labs'
+  | 'withings_scale'
+  | 'withings_bpm'
+  | 'withings_beamo'
+  | 'skulpt_chisel'
+  | 'lumen'
+  | 'apple_health_vitals'
   | 'exercise_library'
   | 'workouts'
   | 'programs';
 
 const SOURCE_LABELS: Record<ImportSource, string> = {
-  body_scan: 'Body Scan (BodySpec / DEXA)',
-  blood_panel: 'Blood Panel (RythmHealth CSV)',
+  body_scan: 'Body Scan (BodySpec / DEXA) — ground truth',
+  blood_panel: 'Blood Panel (Rythm Health CSV) — ground truth',
   apple_health_labs: 'Apple Health Labs (PDF or FHIR JSON)',
+  withings_scale: 'Withings Body / Scale (CSV)',
+  withings_bpm: 'Withings BPM Vision (CSV)',
+  withings_beamo: 'Withings BeamO (JSON, beta)',
+  skulpt_chisel: 'Skulpt Chisel (JSON)',
+  lumen: 'Lumen (JSON, beta)',
+  apple_health_vitals: 'Apple Health Vitals (JSON)',
   exercise_library: 'Exercises (JSON)',
   workouts: 'Workouts (JSON)',
   programs: 'Programs (JSON)',
 };
+
+const DAILY_CONTEXT_SOURCES: ImportSource[] = [
+  'withings_scale', 'withings_bpm', 'withings_beamo', 'skulpt_chisel', 'lumen', 'apple_health_vitals',
+];
 
 const SAMPLE_DATA: Record<ImportSource, string> = {
   body_scan: JSON.stringify({
@@ -54,6 +76,28 @@ const SAMPLE_DATA: Record<ImportSource, string> = {
   apple_health_labs: JSON.stringify([
     { marker: 'ApoB', value: 95, unit: 'mg/dL', referenceRange: '0 - 90', time: '2026-04-01' },
     { marker: 'HDL Cholesterol', value: 58, unit: 'mg/dL', referenceRange: '40 - 100', time: '2026-04-01' },
+  ], null, 2),
+  withings_scale: 'Date,Weight (kg),Fat mass (kg),Muscle mass (kg),Hydration (kg)\n2024-07-22,83.7,11.5,69.0,50.4\n2024-07-23,83.5,11.4,69.1,50.5',
+  withings_bpm: 'Date,Systolic (mmHg),Diastolic (mmHg),Heart rate (bpm)\n2024-07-23,118,76,58\n2024-07-24,120,78,60',
+  withings_beamo: JSON.stringify([
+    { date: '2024-07-23', tempF: 98.1, spo2: 98, ecg: 'normal', notes: 'AM check' },
+  ], null, 2),
+  skulpt_chisel: JSON.stringify({
+    date: '2024-07-20', overallMQ: 137, bodyFatPct: 14.1,
+    regions: [
+      { region: 'chest', mq: 142, bodyFatPct: 11.5 },
+      { region: 'biceps', mq: 148, bodyFatPct: 9.0 },
+    ],
+  }, null, 2),
+  lumen: JSON.stringify([
+    { date: '2024-07-21', level: 2 },
+    { date: '2024-07-21', level: 3 },
+    { date: '2024-07-22', level: 2 },
+  ], null, 2),
+  apple_health_vitals: JSON.stringify([
+    { type: 'HKQuantityTypeIdentifierOxygenSaturation', value: 0.98, startDate: '2024-07-22T08:00:00Z' },
+    { type: 'HKQuantityTypeIdentifierRestingHeartRate', value: 56, startDate: '2024-07-22T07:00:00Z' },
+    { type: 'HKQuantityTypeIdentifierStepCount', value: 8423, startDate: '2024-07-22T23:59:00Z' },
   ], null, 2),
   exercise_library: JSON.stringify([{ name: 'Romanian Deadlift', movementPattern: 'hip_hinge', muscleGroups: ['hamstrings', 'glutes'], equipment: ['barbell'], difficulty: 'intermediate' }], null, 2),
   workouts: JSON.stringify([{ name: 'Upper Body Strength', difficulty: 'intermediate', estimatedDuration: 60, blocks: [] }], null, 2),
@@ -76,6 +120,24 @@ const Admin: React.FC = () => {
   const createBloodPanel = useCreateBloodPanel();
   const analyzeSnapshot = useAnalyzeSnapshot();
   const analyzeBloodPanel = useAnalyzeBloodPanel();
+  const bulkCreateCheckins = useBulkCreateHealthCheckins();
+
+  const parseCheckin = (src: ImportSource, text: string) => {
+    switch (src) {
+      case 'withings_scale': return parseWithingsScaleCsv(text);
+      case 'withings_bpm': return parseWithingsBpmCsv(text);
+      case 'withings_beamo': return parseWithingsBeamoJson(text);
+      case 'skulpt_chisel': return parseSkulptJson(text);
+      case 'lumen': return parseLumenJson(text);
+      case 'apple_health_vitals': return parseAppleHealthVitalsJson(text);
+      default: return { data: null, errors: ['Unsupported source'] as string[], warnings: [] as string[] };
+    }
+  };
+      case 'lumen': return parseLumenJson(text);
+      case 'apple_health_vitals': return parseAppleHealthVitalsJson(text);
+      default: return { data: null, errors: ['Unsupported source'], warnings: [] } as const;
+    }
+  };
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [source, setSource] = useState<ImportSource>(initialSource);
@@ -145,6 +207,23 @@ const Admin: React.FC = () => {
             isValid: true,
           });
         }
+      } else if (DAILY_CONTEXT_SOURCES.includes(source)) {
+        const result = parseCheckin(source, rawText);
+        if (result.errors.length > 0) setErrors(result.errors);
+        if (result.warnings.length > 0) setWarnings(result.warnings);
+        if (result.data) {
+          const checkins = result.data.checkins;
+          setPreview({
+            type: 'snapshots', schemaVersion: '1.0', totalItems: checkins.length,
+            adds: checkins.length, updates: 0, skips: 0, errors: 0,
+            items: checkins.map((c, i) => ({
+              index: i, action: 'add' as const,
+              name: `${c.date} · ${SOURCE_LABELS[source]}`,
+              data: c as unknown as Record<string, unknown>,
+            })),
+            isValid: true,
+          });
+        }
       } else {
         const result = parseEntityArrayJson(rawText);
         if (result.errors.length > 0) setErrors(result.errors);
@@ -192,6 +271,11 @@ const Admin: React.FC = () => {
         } catch {
           toast({ title: 'Apple Health labs imported' });
         }
+      } else if (DAILY_CONTEXT_SOURCES.includes(source)) {
+        const result = parseCheckin(source, rawText);
+        if (!result.data) throw new Error('Validation failed');
+        const saved = await bulkCreateCheckins.mutateAsync(result.data.checkins);
+        toast({ title: `${SOURCE_LABELS[source]} imported`, description: `${saved.length} reading${saved.length !== 1 ? 's' : ''} saved.` });
       } else {
         const result = parseEntityArrayJson(rawText);
         if (!result.data) throw new Error('Validation failed');

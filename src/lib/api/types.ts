@@ -584,3 +584,105 @@ export interface NutritionTargets {
   autoBaseline: { calories: number; protein: number; carbs: number; fat: number };
   overridden: { calories: boolean; protein: boolean; carbs: boolean; fat: boolean };
 }
+// ============ Health Check-ins (daily/context devices) ============
+// Ground-truth sources (DEXA / Rythm) live in Snapshot/BloodPanel.
+// All other devices funnel into HealthCheckin so they can overlay without
+// overriding the values used by nutrition / protocol math.
+
+export type HealthSourceId =
+  | 'bodyspec'
+  | 'rythmhealth'
+  | 'withings_scale'
+  | 'withings_bpm'
+  | 'withings_beamo'
+  | 'skulpt_chisel'
+  | 'apple_health'
+  | 'lumen';
+
+export type HealthSourceTier = 'truth' | 'context';
+export type HealthSourceCadence = 'monthly' | 'weekly' | 'daily' | 'on_demand';
+
+export interface HealthSourceMeta {
+  label: string;
+  shortLabel: string;
+  tier: HealthSourceTier;
+  cadence: HealthSourceCadence;
+  description: string;
+  beta?: boolean;
+}
+
+export const HEALTH_SOURCE_META: Record<HealthSourceId, HealthSourceMeta> = {
+  bodyspec: {
+    label: 'BodySpec (DEXA)', shortLabel: 'DEXA', tier: 'truth', cadence: 'monthly',
+    description: 'Gold-standard body composition. Drives nutrition targets.',
+  },
+  rythmhealth: {
+    label: 'Rythm Health', shortLabel: 'Rythm', tier: 'truth', cadence: 'monthly',
+    description: 'Quarterly blood panels. Drives marker insights.',
+  },
+  withings_scale: {
+    label: 'Withings Body Scan', shortLabel: 'Withings Scale', tier: 'context', cadence: 'daily',
+    description: 'Daily weight, BF%, segmental composition. Overlays DEXA trend.',
+  },
+  withings_bpm: {
+    label: 'Withings BPM Vision', shortLabel: 'Withings BP', tier: 'context', cadence: 'daily',
+    description: 'Blood pressure + pulse spot checks.',
+  },
+  withings_beamo: {
+    label: 'Withings BeamO', shortLabel: 'BeamO', tier: 'context', cadence: 'on_demand',
+    description: 'Stethoscope, ECG, SpO2, temperature multi-scope.', beta: true,
+  },
+  skulpt_chisel: {
+    label: 'Skulpt Chisel', shortLabel: 'Skulpt', tier: 'context', cadence: 'weekly',
+    description: 'Regional muscle quality (MQ) + body fat. Overlays DEXA regions.',
+  },
+  apple_health: {
+    label: 'Apple Health', shortLabel: 'Apple', tier: 'context', cadence: 'daily',
+    description: 'Aggregated wearable + iPhone vitals (SpO2, BP, RHR, steps, temp).',
+  },
+  lumen: {
+    label: 'Lumen', shortLabel: 'Lumen', tier: 'context', cadence: 'daily',
+    description: 'Metabolic flexibility — morning + post-meal fuel readings.', beta: true,
+  },
+};
+
+export interface RegionalMQ {
+  region: 'chest' | 'abs' | 'back' | 'biceps' | 'triceps' | 'quads' | 'hamstrings' | 'calves' | 'glutes' | string;
+  mq?: number;             // Skulpt Muscle Quality score
+  bodyFatPct?: number;
+}
+
+export type EcgRhythm = 'normal' | 'afib' | 'inconclusive';
+export type LumenLevel = 1 | 2 | 3 | 4 | 5;
+
+export interface HealthCheckin {
+  id: string;
+  date: string;            // YYYY-MM-DD
+  source: HealthSourceId;
+  tier: HealthSourceTier;
+  // Body composition
+  weightLbs?: number;
+  bodyFatPct?: number;
+  leanMassLbs?: number;
+  fatMassLbs?: number;
+  visceralFat?: number;
+  waterPct?: number;
+  muscleQualityMQ?: number;
+  regionalMQ?: RegionalMQ[];
+  // Vitals
+  systolicMmHg?: number;
+  diastolicMmHg?: number;
+  pulseBpm?: number;
+  bodyTempF?: number;
+  bloodOxygenPct?: number;
+  ecgRhythm?: EcgRhythm;
+  stethoscopeNotes?: string;
+  // Metabolic
+  morningLumenLevel?: LumenLevel;
+  lumenLevel?: LumenLevel;
+  metabolicFlexScore?: number;
+  // Raw
+  rawJson?: string;
+  notes?: string;
+  createdAt: string;
+}

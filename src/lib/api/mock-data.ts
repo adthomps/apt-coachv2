@@ -621,3 +621,46 @@ export const mockBloodPanels: BloodPanel[] = [
     createdAt: '2026-03-09T10:00:00Z',
   },
 ];
+
+// ============ Health Check-ins (daily-context devices) ============
+import type { HealthCheckin } from './types';
+
+export const mockHealthCheckins: HealthCheckin[] = [
+  {
+    id: 'hc_1', date: '2024-07-22', source: 'withings_scale', tier: 'context',
+    weightLbs: 184.6, bodyFatPct: 13.8, leanMassLbs: 152.1, waterPct: 60.2, visceralFat: 8,
+    notes: 'Morning, fasted.', createdAt: '2024-07-22T07:15:00Z',
+  },
+  {
+    id: 'hc_2', date: '2024-07-23', source: 'withings_scale', tier: 'context',
+    weightLbs: 184.2, bodyFatPct: 13.7, leanMassLbs: 152.3, waterPct: 60.3,
+    createdAt: '2024-07-23T07:10:00Z',
+  },
+  {
+    id: 'hc_3', date: '2024-07-23', source: 'withings_bpm', tier: 'context',
+    systolicMmHg: 118, diastolicMmHg: 76, pulseBpm: 58,
+    createdAt: '2024-07-23T07:20:00Z',
+  },
+  {
+    id: 'hc_4', date: '2024-07-22', source: 'apple_health', tier: 'context',
+    bloodOxygenPct: 98, pulseBpm: 56, bodyTempF: 97.8,
+    createdAt: '2024-07-22T23:30:00Z',
+  },
+  {
+    id: 'hc_5', date: '2024-07-21', source: 'lumen', tier: 'context',
+    morningLumenLevel: 2, lumenLevel: 3, metabolicFlexScore: 18,
+    notes: 'Fat-burn AM, mid-range mid-day.', createdAt: '2024-07-21T07:00:00Z',
+  },
+  {
+    id: 'hc_6', date: '2024-07-20', source: 'skulpt_chisel', tier: 'context',
+    bodyFatPct: 14.1, muscleQualityMQ: 137,
+    regionalMQ: [
+      { region: 'chest', mq: 142, bodyFatPct: 11.5 },
+      { region: 'biceps', mq: 148, bodyFatPct: 9.0 },
+      { region: 'abs', mq: 132, bodyFatPct: 16.0 },
+      { region: 'quads', mq: 135, bodyFatPct: 13.5 },
+      { region: 'hamstrings', mq: 130, bodyFatPct: 14.0 },
+    ],
+    createdAt: '2024-07-20T18:00:00Z',
+  },
+];

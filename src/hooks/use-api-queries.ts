@@ -7,9 +7,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   exerciseApi, workoutApi, programApi, snapshotApi,
   scheduleApi, sessionApi, performanceApi, adaptiveApi, importApi, bloodPanelApi,
-  dailyLogApi, nutritionGoalApi,
+  dailyLogApi, nutritionGoalApi, healthCheckinApi,
 } from '@/lib/api';
-import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal, DailyVitals } from '@/lib/api/types';
+import type { HealthCheckinFilter } from '@/lib/api/client';
+import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal, DailyVitals, HealthCheckin } from '@/lib/api/types';
 
 // ============ Query Keys ============
 
@@ -396,5 +397,51 @@ export function useCreateNutritionGoal() {
       qc.invalidateQueries({ queryKey: queryKeys.nutritionGoals });
       qc.invalidateQueries({ queryKey: ['nutritionGoals'] });
     },
+  });
+}
+
+// ============ Health Check-in Hooks ============
+
+export const healthCheckinKeys = {
+  all: ['healthCheckins'] as const,
+  list: (filter: HealthCheckinFilter) => ['healthCheckins', filter] as const,
+  latest: ['healthCheckins', 'latest'] as const,
+};
+
+export function useHealthCheckins(filter: HealthCheckinFilter = {}) {
+  return useQuery({
+    queryKey: healthCheckinKeys.list(filter),
+    queryFn: () => healthCheckinApi.list(filter),
+  });
+}
+
+export function useLatestHealthCheckins() {
+  return useQuery({
+    queryKey: healthCheckinKeys.latest,
+    queryFn: () => healthCheckinApi.latestBySource(),
+  });
+}
+
+export function useCreateHealthCheckin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Omit<HealthCheckin, 'id' | 'createdAt' | 'tier'>) => healthCheckinApi.create(input),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: healthCheckinKeys.all }); },
+  });
+}
+
+export function useBulkCreateHealthCheckins() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (inputs: Array<Omit<HealthCheckin, 'id' | 'createdAt' | 'tier'>>) => healthCheckinApi.bulkCreate(inputs),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: healthCheckinKeys.all }); },
+  });
+}
+
+export function useDeleteHealthCheckin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => healthCheckinApi.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: healthCheckinKeys.all }); },
   });
 }
