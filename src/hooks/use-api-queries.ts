@@ -399,3 +399,49 @@ export function useCreateNutritionGoal() {
     },
   });
 }
+
+// ============ Health Check-in Hooks ============
+
+export const healthCheckinKeys = {
+  all: ['healthCheckins'] as const,
+  list: (filter: HealthCheckinFilter) => ['healthCheckins', filter] as const,
+  latest: ['healthCheckins', 'latest'] as const,
+};
+
+export function useHealthCheckins(filter: HealthCheckinFilter = {}) {
+  return useQuery({
+    queryKey: healthCheckinKeys.list(filter),
+    queryFn: () => healthCheckinApi.list(filter),
+  });
+}
+
+export function useLatestHealthCheckins() {
+  return useQuery({
+    queryKey: healthCheckinKeys.latest,
+    queryFn: () => healthCheckinApi.latestBySource(),
+  });
+}
+
+export function useCreateHealthCheckin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Omit<HealthCheckin, 'id' | 'createdAt' | 'tier'>) => healthCheckinApi.create(input),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: healthCheckinKeys.all }); },
+  });
+}
+
+export function useBulkCreateHealthCheckins() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (inputs: Array<Omit<HealthCheckin, 'id' | 'createdAt' | 'tier'>>) => healthCheckinApi.bulkCreate(inputs),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: healthCheckinKeys.all }); },
+  });
+}
+
+export function useDeleteHealthCheckin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => healthCheckinApi.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: healthCheckinKeys.all }); },
+  });
+}
