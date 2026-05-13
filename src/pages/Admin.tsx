@@ -133,11 +133,6 @@ const Admin: React.FC = () => {
       default: return { data: null, errors: ['Unsupported source'] as string[], warnings: [] as string[] };
     }
   };
-      case 'lumen': return parseLumenJson(text);
-      case 'apple_health_vitals': return parseAppleHealthVitalsJson(text);
-      default: return { data: null, errors: ['Unsupported source'], warnings: [] } as const;
-    }
-  };
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [source, setSource] = useState<ImportSource>(initialSource);
