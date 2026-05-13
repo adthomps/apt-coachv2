@@ -301,6 +301,14 @@ export interface SessionExerciseLog {
   notes?: string;
 }
 
+export type SessionKind = 'strength' | 'cardio' | 'mixed';
+
+export const SESSION_KIND_LABELS: Record<SessionKind, string> = {
+  strength: 'Strength',
+  cardio: 'Cardio',
+  mixed: 'Mixed',
+};
+
 export interface SessionMetrics {
   /** Active calories from a wearable (e.g. Apple Health). */
   activeCalories?: number;
@@ -308,8 +316,16 @@ export interface SessionMetrics {
   totalCalories?: number;
   /** Average heart rate (bpm). */
   avgHeartRate?: number;
+  /** Peak heart rate (bpm). */
+  maxHeartRate?: number;
   /** Subjective Rate of Perceived Exertion 1–10. */
   rpe?: number;
+  /** Cardio: distance covered (miles). */
+  distanceMiles?: number;
+  /** Cardio: average pace (seconds per mile). */
+  avgPaceSecPerMile?: number;
+  /** Cardio: elevation gain (feet). */
+  elevationGainFt?: number;
 }
 
 export interface WorkoutSession {
