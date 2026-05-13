@@ -26,7 +26,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { computeSessionSnapshot } from '@/lib/ai/session-insights';
 import { shiftScheduleForSession } from '@/lib/schedule-sync';
-import type { SessionMetrics, WorkoutSession } from '@/lib/api/types';
+import type { SessionKind, SessionMetrics, WorkoutSession } from '@/lib/api/types';
+import { SESSION_KIND_LABELS } from '@/lib/api/types';
 import { toast } from '@/hooks/use-toast';
 
 const fmtDateTimeLocal = (iso?: string) => {
