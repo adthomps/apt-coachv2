@@ -130,6 +130,21 @@ const Admin: React.FC = () => {
             isValid: true,
           });
         }
+      } else if (source === 'apple_health_labs') {
+        const result = parseAppleHealthLabsJson(rawText);
+        if (result.errors.length > 0) setErrors(result.errors);
+        if (result.warnings.length > 0) setWarnings(result.warnings);
+        if (result.data) {
+          setPreview({
+            type: 'snapshots', schemaVersion: '1.0', totalItems: result.data.panelInput.markers.length,
+            adds: result.data.panelInput.markers.length, updates: 0, skips: 0,
+            errors: result.data.outOfRangeCount,
+            items: result.data.panelInput.markers.map((m, i) => ({
+              index: i, action: 'add' as const, name: `${m.marker}: ${m.value} ${m.unit}`, data: m as unknown as Record<string, unknown>,
+            })),
+            isValid: true,
+          });
+        }
       } else {
         const result = parseEntityArrayJson(rawText);
         if (result.errors.length > 0) setErrors(result.errors);
