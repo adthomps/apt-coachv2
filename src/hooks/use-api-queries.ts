@@ -9,7 +9,7 @@ import {
   scheduleApi, sessionApi, performanceApi, adaptiveApi, importApi, bloodPanelApi,
   dailyLogApi, nutritionGoalApi,
 } from '@/lib/api';
-import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal } from '@/lib/api/types';
+import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal, DailyVitals } from '@/lib/api/types';
 
 // ============ Query Keys ============
 
