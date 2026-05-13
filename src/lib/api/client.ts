@@ -450,3 +450,57 @@ export const nutritionGoalApi = {
     if (i !== -1) nutritionGoals.splice(i, 1);
   },
 };
+
+// ============ Health Check-ins API ============
+
+import type { HealthCheckin, HealthSourceId } from './types';
+import { HEALTH_SOURCE_META } from './types';
+import { mockHealthCheckins } from './mock-data';
+
+export interface HealthCheckinFilter {
+  source?: HealthSourceId;
+  from?: string;
+  to?: string;
+}
+
+export const healthCheckinApi = {
+  async list(filter: HealthCheckinFilter = {}): Promise<HealthCheckin[]> {
+    await delay(120);
+    return [...mockHealthCheckins]
+      .filter(c => !filter.source || c.source === filter.source)
+      .filter(c => !filter.from || c.date >= filter.from)
+      .filter(c => !filter.to || c.date <= filter.to)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  },
+  async create(input: Omit<HealthCheckin, 'id' | 'createdAt' | 'tier'>): Promise<HealthCheckin> {
+    await delay(150);
+    const tier = HEALTH_SOURCE_META[input.source].tier;
+    const c: HealthCheckin = { id: `hc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, tier, ...input, createdAt: new Date().toISOString() };
+    mockHealthCheckins.push(c);
+    return c;
+  },
+  async bulkCreate(inputs: Array<Omit<HealthCheckin, 'id' | 'createdAt' | 'tier'>>): Promise<HealthCheckin[]> {
+    await delay(250);
+    const out: HealthCheckin[] = [];
+    for (const input of inputs) {
+      const tier = HEALTH_SOURCE_META[input.source].tier;
+      const c: HealthCheckin = { id: `hc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, tier, ...input, createdAt: new Date().toISOString() };
+      mockHealthCheckins.push(c);
+      out.push(c);
+    }
+    return out;
+  },
+  async delete(id: string): Promise<void> {
+    await delay(100);
+    const i = mockHealthCheckins.findIndex(c => c.id === id);
+    if (i !== -1) mockHealthCheckins.splice(i, 1);
+  },
+  async latestBySource(): Promise<Partial<Record<HealthSourceId, HealthCheckin>>> {
+    await delay(80);
+    const map: Partial<Record<HealthSourceId, HealthCheckin>> = {};
+    for (const c of [...mockHealthCheckins].sort((a, b) => b.date.localeCompare(a.date))) {
+      if (!map[c.source]) map[c.source] = c;
+    }
+    return map;
+  },
+};

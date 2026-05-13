@@ -7,9 +7,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   exerciseApi, workoutApi, programApi, snapshotApi,
   scheduleApi, sessionApi, performanceApi, adaptiveApi, importApi, bloodPanelApi,
-  dailyLogApi, nutritionGoalApi,
+  dailyLogApi, nutritionGoalApi, healthCheckinApi,
 } from '@/lib/api';
-import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal, DailyVitals } from '@/lib/api/types';
+import type { HealthCheckinFilter } from '@/lib/api/client';
+import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal, DailyVitals, HealthCheckin } from '@/lib/api/types';
 
 // ============ Query Keys ============
 
