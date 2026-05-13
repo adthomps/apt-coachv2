@@ -333,6 +333,8 @@ export interface WorkoutSession {
   workoutId: string;
   workoutName: string;
   programId?: string;
+  /** Strength, cardio, or mixed — affects which metrics are surfaced. */
+  kind?: SessionKind;
   status: 'in_progress' | 'completed' | 'abandoned';
   /** ISO timestamp the session was started. */
   startedAt: string;
