@@ -9,6 +9,7 @@ import Layout from '@/components/Layout';
 import PageHeader from '@/components/common/PageHeader';
 import SectionCard from '@/components/common/SectionCard';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
+import HeartRateZoneBar from '@/components/sessions/HeartRateZoneBar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -322,6 +323,19 @@ const SessionDetail: React.FC = () => {
                 label="Elevation Gain"
                 value={session.metrics?.elevationGainFt ? `${session.metrics.elevationGainFt} ft` : '—'}
               />
+            </div>
+          )}
+          {session.metrics?.hrZoneSecs && (
+            <div className="mt-4 rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-primary" /> Heart-Rate Zones
+                </div>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-primary/30 text-primary">
+                  Apple Fitness
+                </Badge>
+              </div>
+              <HeartRateZoneBar zones={session.metrics.hrZoneSecs} />
             </div>
           )}
           {session.notes && (

@@ -326,6 +326,8 @@ export interface SessionMetrics {
   avgPaceSecPerMile?: number;
   /** Cardio: elevation gain (feet). */
   elevationGainFt?: number;
+  /** Apple Fitness HR zones in seconds: [Z1, Z2, Z3, Z4, Z5]. */
+  hrZoneSecs?: [number, number, number, number, number];
 }
 
 export interface WorkoutSession {
@@ -500,6 +502,10 @@ export interface DailyVitals {
   stepsCount?: number;
   waistCircumferenceIn?: number;
   restingHeartRate?: number;
+  /** Apple Health: blood glucose mg/dL (CGM or finger-stick avg). */
+  bloodGlucoseMgDl?: number;
+  /** Apple Health: water intake (fluid ounces). */
+  waterIntakeOz?: number;
   notes?: string;
 }
 
@@ -514,6 +520,8 @@ export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes'>, string
   stepsCount: 'Steps',
   waistCircumferenceIn: 'Waist (in)',
   restingHeartRate: 'Resting HR (bpm)',
+  bloodGlucoseMgDl: 'Blood Glucose (mg/dL)',
+  waterIntakeOz: 'Water (oz)',
 };
 
 export interface DailyLog {

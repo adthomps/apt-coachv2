@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Upload, FileJson, CheckCircle, XCircle, Clock,
   Eye, History, Settings, Activity, Droplets, Database, AlertTriangle,
@@ -65,6 +65,40 @@ const SOURCE_LABELS: Record<ImportSource, string> = {
 
 const DAILY_CONTEXT_SOURCES: ImportSource[] = [
   'withings_scale', 'withings_bpm', 'withings_beamo', 'skulpt_chisel', 'lumen', 'apple_health_vitals',
+];
+
+interface SourceGroupDef {
+  id: 'truth' | 'body_comp' | 'vitals' | 'catalog';
+  label: string;
+  description: string;
+  sources: ImportSource[];
+}
+
+const SOURCE_GROUPS: SourceGroupDef[] = [
+  {
+    id: 'truth',
+    label: 'Ground truth · monthly / yearly',
+    description: 'Drives nutrition targets and marker insights.',
+    sources: ['body_scan', 'blood_panel', 'apple_health_labs'],
+  },
+  {
+    id: 'body_comp',
+    label: 'Body composition · context',
+    description: 'Overlays DEXA — never overrides it.',
+    sources: ['skulpt_chisel', 'withings_scale'],
+  },
+  {
+    id: 'vitals',
+    label: 'Vitals & metabolic · daily',
+    description: 'Spot checks between scans.',
+    sources: ['withings_bpm', 'withings_beamo', 'apple_health_vitals', 'lumen'],
+  },
+  {
+    id: 'catalog',
+    label: 'Library catalog',
+    description: 'Reference data for the app itself.',
+    sources: ['exercise_library', 'workouts', 'programs'],
+  },
 ];
 
 const SAMPLE_DATA: Record<ImportSource, string> = {
@@ -324,13 +358,51 @@ const Admin: React.FC = () => {
                   description="Choose a source, paste data, validate, then import. Same flow for every type."
                 >
                   <div className="space-y-4">
+                    <div className="space-y-3">
+                      {SOURCE_GROUPS.map((g) => (
+                        <div key={g.id} className="space-y-1.5">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-foreground">{g.label}</span>
+                            <span className="text-[11px] text-muted-foreground">{g.description}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {g.sources.map((s) => {
+                              const active = source === s;
+                              return (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  onClick={() => handleSourceChange(s)}
+                                  className={
+                                    'rounded-full border px-3 py-1 text-xs transition-colors ' +
+                                    (active
+                                      ? 'border-primary bg-primary text-primary-foreground'
+                                      : g.id === 'truth'
+                                        ? 'border-primary/30 bg-primary/5 text-primary hover:bg-primary/10'
+                                        : 'border-border bg-background text-muted-foreground hover:bg-muted')
+                                  }
+                                >
+                                  {SOURCE_LABELS[s]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Source</label>
                       <Select value={source} onValueChange={(v) => handleSourceChange(v as ImportSource)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {(Object.entries(SOURCE_LABELS) as [ImportSource, string][]).map(([v, l]) => (
-                            <SelectItem key={v} value={v}>{l}</SelectItem>
+                          {SOURCE_GROUPS.map((g) => (
+                            <SelectGroup key={g.id}>
+                              <SelectLabel className="text-[11px] uppercase tracking-wide">{g.label}</SelectLabel>
+                              {g.sources.map((s) => (
+                                <SelectItem key={s} value={s}>{SOURCE_LABELS[s]}</SelectItem>
+                              ))}
+                            </SelectGroup>
                           ))}
                         </SelectContent>
                       </Select>

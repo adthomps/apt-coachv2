@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import BloodPanelDetail from '@/components/BloodPanelDetail';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
+import GroundTruthLegend from '@/components/health/GroundTruthLegend';
 import DeleteConfirmDialog from '@/components/DeleteConfirmDialog';
 import WithingsImportDialog from '@/components/WithingsImportDialog';
 import HealthSelectorBar from '@/components/health/HealthSelectorBar';
@@ -200,6 +201,8 @@ const Health: React.FC = () => {
             </Link>
           }
         />
+
+        <GroundTruthLegend />
 
         <Tabs defaultValue={defaultTab}>
           <TabsList>
