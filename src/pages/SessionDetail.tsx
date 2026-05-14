@@ -19,10 +19,12 @@ import { Switch } from '@/components/ui/switch';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSession, useSessions, useSchedule, useUpdateSession } from '@/hooks/use-api-queries';
 import { computeSessionSnapshot, getSessionInsights, getInputQuality } from '@/lib/ai/session-insights';
 import { useToast } from '@/hooks/use-toast';
-import type { SessionMetrics } from '@/lib/api/types';
+import type { SessionMetrics, SessionKind, WorkoutSession } from '@/lib/api/types';
+import { SESSION_KIND_LABELS } from '@/lib/api/types';
 
 const fmtDateTimeLocal = (iso?: string) => {
   if (!iso) return '';
