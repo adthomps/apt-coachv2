@@ -19,10 +19,12 @@ import { Switch } from '@/components/ui/switch';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSession, useSessions, useSchedule, useUpdateSession } from '@/hooks/use-api-queries';
 import { computeSessionSnapshot, getSessionInsights, getInputQuality } from '@/lib/ai/session-insights';
 import { useToast } from '@/hooks/use-toast';
-import type { SessionMetrics } from '@/lib/api/types';
+import type { SessionMetrics, SessionKind, WorkoutSession } from '@/lib/api/types';
+import { SESSION_KIND_LABELS } from '@/lib/api/types';
 
 const fmtDateTimeLocal = (iso?: string) => {
   if (!iso) return '';
@@ -53,10 +55,20 @@ const SessionDetail: React.FC = () => {
   // Edit form state
   const [startedAt, setStartedAt] = useState('');
   const [completedAt, setCompletedAt] = useState('');
+  const [editStatus, setEditStatus] = useState<WorkoutSession['status']>('completed');
+  const [editKind, setEditKind] = useState<SessionKind>('strength');
   const [activeCalories, setActiveCalories] = useState('');
   const [totalCalories, setTotalCalories] = useState('');
   const [avgHeartRate, setAvgHeartRate] = useState('');
+  const [maxHeartRate, setMaxHeartRate] = useState('');
   const [rpe, setRpe] = useState('');
+  const [zone1, setZone1] = useState('');
+  const [zone2, setZone2] = useState('');
+  const [zone3, setZone3] = useState('');
+  const [zone4, setZone4] = useState('');
+  const [zone5, setZone5] = useState('');
+  const [distanceMiles, setDistanceMiles] = useState('');
+  const [elevationFt, setElevationFt] = useState('');
   const [notes, setNotes] = useState('');
 
   const snapshot = useMemo(
@@ -79,26 +91,47 @@ const SessionDetail: React.FC = () => {
     if (!session) return;
     setStartedAt(fmtDateTimeLocal(session.startedAt));
     setCompletedAt(fmtDateTimeLocal(session.completedAt));
+    setEditStatus(session.status);
+    setEditKind(session.kind ?? 'strength');
     setActiveCalories(session.metrics?.activeCalories?.toString() ?? '');
     setTotalCalories(session.metrics?.totalCalories?.toString() ?? '');
     setAvgHeartRate(session.metrics?.avgHeartRate?.toString() ?? '');
+    setMaxHeartRate(session.metrics?.maxHeartRate?.toString() ?? '');
     setRpe(session.metrics?.rpe?.toString() ?? '');
+    const z = session.metrics?.hrZoneSecs;
+    setZone1(z?.[0] ? String(z[0]) : '');
+    setZone2(z?.[1] ? String(z[1]) : '');
+    setZone3(z?.[2] ? String(z[2]) : '');
+    setZone4(z?.[3] ? String(z[3]) : '');
+    setZone5(z?.[4] ? String(z[4]) : '');
+    setDistanceMiles(session.metrics?.distanceMiles?.toString() ?? '');
+    setElevationFt(session.metrics?.elevationGainFt?.toString() ?? '');
     setNotes(session.notes ?? '');
     setEditOpen(true);
   };
 
   const saveEdit = async () => {
     if (!session) return;
+    const zoneVals: [number, number, number, number, number] = [
+      Number(zone1) || 0, Number(zone2) || 0, Number(zone3) || 0, Number(zone4) || 0, Number(zone5) || 0,
+    ];
+    const anyZone = zoneVals.some(v => v > 0);
     const metrics: SessionMetrics = {
       activeCalories: activeCalories ? Number(activeCalories) : undefined,
       totalCalories: totalCalories ? Number(totalCalories) : undefined,
       avgHeartRate: avgHeartRate ? Number(avgHeartRate) : undefined,
+      maxHeartRate: maxHeartRate ? Number(maxHeartRate) : undefined,
       rpe: rpe ? Number(rpe) : undefined,
+      hrZoneSecs: anyZone ? zoneVals : undefined,
+      distanceMiles: distanceMiles ? Number(distanceMiles) : undefined,
+      elevationGainFt: elevationFt ? Number(elevationFt) : undefined,
     };
     try {
       await updateSession.mutateAsync({
         id: session.id,
         input: {
+          status: editStatus,
+          kind: editKind,
           startedAt: startedAt ? fromDateTimeLocal(startedAt) : session.startedAt,
           completedAt: completedAt ? fromDateTimeLocal(completedAt) : undefined,
           metrics,
@@ -464,15 +497,42 @@ const SessionDetail: React.FC = () => {
 
       {/* === Edit session dialog === */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Session</DialogTitle>
             <DialogDescription>
-              Update timing and wearable data. Manual values are accepted; future Apple Health / Withings sync can fill these in automatically.
+              Status, type, timing, and Apple Fitness wearable metrics. Manual values accepted; future device sync will fill these in.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* Status + kind */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={editStatus} onValueChange={(v) => setEditStatus(v as WorkoutSession['status'])}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_progress">In progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="abandoned">Abandoned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Type</Label>
+                <Select value={editKind} onValueChange={(v) => setEditKind(v as SessionKind)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(SESSION_KIND_LABELS) as SessionKind[]).map(k => (
+                      <SelectItem key={k} value={k}>{SESSION_KIND_LABELS[k]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Timing */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="started">Start</Label>
@@ -484,24 +544,68 @@ const SessionDetail: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="active">Active Calories</Label>
-                <Input id="active" type="number" min="0" value={activeCalories} onChange={(e) => setActiveCalories(e.target.value)} />
+            {/* Apple Fitness metrics */}
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">Apple Fitness</span>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-primary/30 text-primary">Per session</Badge>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="total">Total Calories</Label>
-                <Input id="total" type="number" min="0" value={totalCalories} onChange={(e) => setTotalCalories(e.target.value)} />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="active">Active Calories</Label>
+                  <Input id="active" type="number" min="0" value={activeCalories} onChange={(e) => setActiveCalories(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="total">Total Calories</Label>
+                  <Input id="total" type="number" min="0" value={totalCalories} onChange={(e) => setTotalCalories(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="hr">Avg HR (BPM)</Label>
+                  <Input id="hr" type="number" min="0" value={avgHeartRate} onChange={(e) => setAvgHeartRate(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="maxhr">Max HR (BPM)</Label>
+                  <Input id="maxhr" type="number" min="0" value={maxHeartRate} onChange={(e) => setMaxHeartRate(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rpe">Effort (RPE 1–10)</Label>
+                  <Input id="rpe" type="number" min="1" max="10" step="0.5" value={rpe} onChange={(e) => setRpe(e.target.value)} />
+                </div>
               </div>
+
+              {/* HR Zones */}
               <div className="space-y-1.5">
-                <Label htmlFor="hr">Avg Heart Rate (BPM)</Label>
-                <Input id="hr" type="number" min="0" value={avgHeartRate} onChange={(e) => setAvgHeartRate(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="rpe">Effort (RPE 1–10)</Label>
-                <Input id="rpe" type="number" min="1" max="10" step="0.5" value={rpe} onChange={(e) => setRpe(e.target.value)} />
+                <Label className="text-xs text-muted-foreground">HR Zones — seconds in Z1–Z5</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { label: 'Z1', value: zone1, set: setZone1 },
+                    { label: 'Z2', value: zone2, set: setZone2 },
+                    { label: 'Z3', value: zone3, set: setZone3 },
+                    { label: 'Z4', value: zone4, set: setZone4 },
+                    { label: 'Z5', value: zone5, set: setZone5 },
+                  ].map(z => (
+                    <div key={z.label} className="space-y-1">
+                      <div className="text-[10px] text-muted-foreground text-center">{z.label}</div>
+                      <Input type="number" min="0" value={z.value} onChange={(e) => z.set(e.target.value)} className="h-8 text-sm tabular-nums" placeholder="0" />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+
+            {/* Cardio (only when relevant) */}
+            {(editKind === 'cardio' || editKind === 'mixed') && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="dist">Distance (mi)</Label>
+                  <Input id="dist" type="number" step="0.01" min="0" value={distanceMiles} onChange={(e) => setDistanceMiles(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="elev">Elevation Gain (ft)</Label>
+                  <Input id="elev" type="number" min="0" value={elevationFt} onChange={(e) => setElevationFt(e.target.value)} />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="notes">Notes</Label>

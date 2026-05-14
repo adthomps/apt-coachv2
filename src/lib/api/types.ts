@@ -506,10 +506,20 @@ export interface DailyVitals {
   bloodGlucoseMgDl?: number;
   /** Apple Health: water intake (fluid ounces). */
   waterIntakeOz?: number;
+  /** Apple Health: ECG rhythm reading. */
+  ecgRhythm?: 'normal' | 'afib' | 'inconclusive';
+  /** Lumen: morning fasted reading (1=fat burn → 5=carb burn). */
+  lumenMorningLevel?: 1 | 2 | 3 | 4 | 5;
+  /** Lumen: peak / latest reading of the day. */
+  lumenPeakLevel?: 1 | 2 | 3 | 4 | 5;
+  /** Withings Scale: daily body fat % (context overlay; DEXA remains truth). */
+  withingsBodyFatPct?: number;
+  /** Withings Scale: daily weight (lbs) — mirrors DailyLog.bodyWeight when sourced from Withings. */
+  withingsWeightLbs?: number;
   notes?: string;
 }
 
-export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes'>, string> = {
+export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes' | 'ecgRhythm'>, string> = {
   bloodOxygenPct: 'Blood Oxygen (%)',
   systolicMmHg: 'BP Systolic (mmHg)',
   diastolicMmHg: 'BP Diastolic (mmHg)',
@@ -522,6 +532,10 @@ export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes'>, string
   restingHeartRate: 'Resting HR (bpm)',
   bloodGlucoseMgDl: 'Blood Glucose (mg/dL)',
   waterIntakeOz: 'Water (oz)',
+  lumenMorningLevel: 'Lumen Morning',
+  lumenPeakLevel: 'Lumen Peak',
+  withingsBodyFatPct: 'Withings BF%',
+  withingsWeightLbs: 'Withings Weight (lbs)',
 };
 
 export interface DailyLog {
