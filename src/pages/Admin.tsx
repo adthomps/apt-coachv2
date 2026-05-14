@@ -67,6 +67,40 @@ const DAILY_CONTEXT_SOURCES: ImportSource[] = [
   'withings_scale', 'withings_bpm', 'withings_beamo', 'skulpt_chisel', 'lumen', 'apple_health_vitals',
 ];
 
+interface SourceGroupDef {
+  id: 'truth' | 'body_comp' | 'vitals' | 'catalog';
+  label: string;
+  description: string;
+  sources: ImportSource[];
+}
+
+const SOURCE_GROUPS: SourceGroupDef[] = [
+  {
+    id: 'truth',
+    label: 'Ground truth · monthly / yearly',
+    description: 'Drives nutrition targets and marker insights.',
+    sources: ['body_scan', 'blood_panel', 'apple_health_labs'],
+  },
+  {
+    id: 'body_comp',
+    label: 'Body composition · context',
+    description: 'Overlays DEXA — never overrides it.',
+    sources: ['skulpt_chisel', 'withings_scale'],
+  },
+  {
+    id: 'vitals',
+    label: 'Vitals & metabolic · daily',
+    description: 'Spot checks between scans.',
+    sources: ['withings_bpm', 'withings_beamo', 'apple_health_vitals', 'lumen'],
+  },
+  {
+    id: 'catalog',
+    label: 'Library catalog',
+    description: 'Reference data for the app itself.',
+    sources: ['exercise_library', 'workouts', 'programs'],
+  },
+];
+
 const SAMPLE_DATA: Record<ImportSource, string> = {
   body_scan: JSON.stringify({
     source: 'bodyspec', scan_date: '2024-01-15',
