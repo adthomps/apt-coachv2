@@ -55,10 +55,20 @@ const SessionDetail: React.FC = () => {
   // Edit form state
   const [startedAt, setStartedAt] = useState('');
   const [completedAt, setCompletedAt] = useState('');
+  const [editStatus, setEditStatus] = useState<WorkoutSession['status']>('completed');
+  const [editKind, setEditKind] = useState<SessionKind>('strength');
   const [activeCalories, setActiveCalories] = useState('');
   const [totalCalories, setTotalCalories] = useState('');
   const [avgHeartRate, setAvgHeartRate] = useState('');
+  const [maxHeartRate, setMaxHeartRate] = useState('');
   const [rpe, setRpe] = useState('');
+  const [zone1, setZone1] = useState('');
+  const [zone2, setZone2] = useState('');
+  const [zone3, setZone3] = useState('');
+  const [zone4, setZone4] = useState('');
+  const [zone5, setZone5] = useState('');
+  const [distanceMiles, setDistanceMiles] = useState('');
+  const [elevationFt, setElevationFt] = useState('');
   const [notes, setNotes] = useState('');
 
   const snapshot = useMemo(
@@ -81,26 +91,47 @@ const SessionDetail: React.FC = () => {
     if (!session) return;
     setStartedAt(fmtDateTimeLocal(session.startedAt));
     setCompletedAt(fmtDateTimeLocal(session.completedAt));
+    setEditStatus(session.status);
+    setEditKind(session.kind ?? 'strength');
     setActiveCalories(session.metrics?.activeCalories?.toString() ?? '');
     setTotalCalories(session.metrics?.totalCalories?.toString() ?? '');
     setAvgHeartRate(session.metrics?.avgHeartRate?.toString() ?? '');
+    setMaxHeartRate(session.metrics?.maxHeartRate?.toString() ?? '');
     setRpe(session.metrics?.rpe?.toString() ?? '');
+    const z = session.metrics?.hrZoneSecs;
+    setZone1(z?.[0] ? String(z[0]) : '');
+    setZone2(z?.[1] ? String(z[1]) : '');
+    setZone3(z?.[2] ? String(z[2]) : '');
+    setZone4(z?.[3] ? String(z[3]) : '');
+    setZone5(z?.[4] ? String(z[4]) : '');
+    setDistanceMiles(session.metrics?.distanceMiles?.toString() ?? '');
+    setElevationFt(session.metrics?.elevationGainFt?.toString() ?? '');
     setNotes(session.notes ?? '');
     setEditOpen(true);
   };
 
   const saveEdit = async () => {
     if (!session) return;
+    const zoneVals: [number, number, number, number, number] = [
+      Number(zone1) || 0, Number(zone2) || 0, Number(zone3) || 0, Number(zone4) || 0, Number(zone5) || 0,
+    ];
+    const anyZone = zoneVals.some(v => v > 0);
     const metrics: SessionMetrics = {
       activeCalories: activeCalories ? Number(activeCalories) : undefined,
       totalCalories: totalCalories ? Number(totalCalories) : undefined,
       avgHeartRate: avgHeartRate ? Number(avgHeartRate) : undefined,
+      maxHeartRate: maxHeartRate ? Number(maxHeartRate) : undefined,
       rpe: rpe ? Number(rpe) : undefined,
+      hrZoneSecs: anyZone ? zoneVals : undefined,
+      distanceMiles: distanceMiles ? Number(distanceMiles) : undefined,
+      elevationGainFt: elevationFt ? Number(elevationFt) : undefined,
     };
     try {
       await updateSession.mutateAsync({
         id: session.id,
         input: {
+          status: editStatus,
+          kind: editKind,
           startedAt: startedAt ? fromDateTimeLocal(startedAt) : session.startedAt,
           completedAt: completedAt ? fromDateTimeLocal(completedAt) : undefined,
           metrics,
