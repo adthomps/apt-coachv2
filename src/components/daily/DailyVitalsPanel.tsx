@@ -8,16 +8,19 @@ import type { DailyVitals } from '@/lib/api/types';
 interface Props {
   date: string;
   vitals?: DailyVitals;
+  bodyWeight?: number;
 }
 
 const COUNT_KEYS: (keyof Omit<DailyVitals, 'notes'>)[] = [
   'stepsCount','bloodGlucoseMgDl','bloodOxygenPct','respiratoryRateBrpm','sleepScore','sleepHours',
-  'restingHeartRate','waterIntakeOz','systolicMmHg','diastolicMmHg','bodyTempF','waistCircumferenceIn',
+  'restingHeartRate','waterIntakeOz','ecgRhythm','systolicMmHg','diastolicMmHg','bodyTempF',
+  'waistCircumferenceIn','withingsBodyFatPct','withingsWeightLbs','lumenMorningLevel','lumenPeakLevel',
 ];
 
-const DailyVitalsPanel: React.FC<Props> = ({ date, vitals }) => {
-  const [open, setOpen] = useState(false);
+const DailyVitalsPanel: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
+  const [open, setOpen] = useState(true);
   const loggedCount = COUNT_KEYS.filter(k => vitals?.[k] !== undefined && vitals?.[k] !== null).length;
+  const totalCount = COUNT_KEYS.length;
 
   return (
     <SectionCard
@@ -25,8 +28,8 @@ const DailyVitalsPanel: React.FC<Props> = ({ date, vitals }) => {
         <span className="flex items-center gap-2">
           <HeartPulse className="h-4 w-4 text-primary" />
           Daily Signals
-          <span className="text-xs text-muted-foreground font-normal">
-            {loggedCount}/{COUNT_KEYS.length} logged
+          <span className="text-xs text-muted-foreground font-normal tabular-nums">
+            {loggedCount}/{totalCount} logged
           </span>
         </span>
       }
@@ -35,9 +38,9 @@ const DailyVitalsPanel: React.FC<Props> = ({ date, vitals }) => {
           {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </Button>
       }
-      description={open ? undefined : 'Apple Health, Withings, Lumen — daily readings grouped by source.'}
+      description={open ? 'Apple Health, Withings, Lumen — daily readings grouped by source. Manual until device sync ships.' : undefined}
     >
-      {open && <DailySignalsTabs date={date} vitals={vitals} />}
+      {open && <DailySignalsTabs date={date} vitals={vitals} bodyWeight={bodyWeight} />}
     </SectionCard>
   );
 };
