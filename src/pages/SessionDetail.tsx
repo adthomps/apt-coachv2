@@ -324,6 +324,19 @@ const SessionDetail: React.FC = () => {
               />
             </div>
           )}
+          {session.metrics?.hrZoneSecs && (
+            <div className="mt-4 rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-primary" /> Heart-Rate Zones
+                </div>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-primary/30 text-primary">
+                  Apple Fitness
+                </Badge>
+              </div>
+              <HeartRateZoneBar zones={session.metrics.hrZoneSecs} />
+            </div>
+          )}
           {session.notes && (
             <div className="mt-4 rounded-lg border border-border p-3 text-sm text-muted-foreground italic">
               “{session.notes}”
