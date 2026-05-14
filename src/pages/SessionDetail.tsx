@@ -497,15 +497,42 @@ const SessionDetail: React.FC = () => {
 
       {/* === Edit session dialog === */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Session</DialogTitle>
             <DialogDescription>
-              Update timing and wearable data. Manual values are accepted; future Apple Health / Withings sync can fill these in automatically.
+              Status, type, timing, and Apple Fitness wearable metrics. Manual values accepted; future device sync will fill these in.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* Status + kind */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={editStatus} onValueChange={(v) => setEditStatus(v as WorkoutSession['status'])}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_progress">In progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="abandoned">Abandoned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Type</Label>
+                <Select value={editKind} onValueChange={(v) => setEditKind(v as SessionKind)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(SESSION_KIND_LABELS) as SessionKind[]).map(k => (
+                      <SelectItem key={k} value={k}>{SESSION_KIND_LABELS[k]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Timing */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="started">Start</Label>
@@ -517,24 +544,68 @@ const SessionDetail: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="active">Active Calories</Label>
-                <Input id="active" type="number" min="0" value={activeCalories} onChange={(e) => setActiveCalories(e.target.value)} />
+            {/* Apple Fitness metrics */}
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">Apple Fitness</span>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-primary/30 text-primary">Per session</Badge>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="total">Total Calories</Label>
-                <Input id="total" type="number" min="0" value={totalCalories} onChange={(e) => setTotalCalories(e.target.value)} />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="active">Active Calories</Label>
+                  <Input id="active" type="number" min="0" value={activeCalories} onChange={(e) => setActiveCalories(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="total">Total Calories</Label>
+                  <Input id="total" type="number" min="0" value={totalCalories} onChange={(e) => setTotalCalories(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="hr">Avg HR (BPM)</Label>
+                  <Input id="hr" type="number" min="0" value={avgHeartRate} onChange={(e) => setAvgHeartRate(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="maxhr">Max HR (BPM)</Label>
+                  <Input id="maxhr" type="number" min="0" value={maxHeartRate} onChange={(e) => setMaxHeartRate(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rpe">Effort (RPE 1–10)</Label>
+                  <Input id="rpe" type="number" min="1" max="10" step="0.5" value={rpe} onChange={(e) => setRpe(e.target.value)} />
+                </div>
               </div>
+
+              {/* HR Zones */}
               <div className="space-y-1.5">
-                <Label htmlFor="hr">Avg Heart Rate (BPM)</Label>
-                <Input id="hr" type="number" min="0" value={avgHeartRate} onChange={(e) => setAvgHeartRate(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="rpe">Effort (RPE 1–10)</Label>
-                <Input id="rpe" type="number" min="1" max="10" step="0.5" value={rpe} onChange={(e) => setRpe(e.target.value)} />
+                <Label className="text-xs text-muted-foreground">HR Zones — seconds in Z1–Z5</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { label: 'Z1', value: zone1, set: setZone1 },
+                    { label: 'Z2', value: zone2, set: setZone2 },
+                    { label: 'Z3', value: zone3, set: setZone3 },
+                    { label: 'Z4', value: zone4, set: setZone4 },
+                    { label: 'Z5', value: zone5, set: setZone5 },
+                  ].map(z => (
+                    <div key={z.label} className="space-y-1">
+                      <div className="text-[10px] text-muted-foreground text-center">{z.label}</div>
+                      <Input type="number" min="0" value={z.value} onChange={(e) => z.set(e.target.value)} className="h-8 text-sm tabular-nums" placeholder="0" />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+
+            {/* Cardio (only when relevant) */}
+            {(editKind === 'cardio' || editKind === 'mixed') && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="dist">Distance (mi)</Label>
+                  <Input id="dist" type="number" step="0.01" min="0" value={distanceMiles} onChange={(e) => setDistanceMiles(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="elev">Elevation Gain (ft)</Label>
+                  <Input id="elev" type="number" min="0" value={elevationFt} onChange={(e) => setElevationFt(e.target.value)} />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="notes">Notes</Label>
