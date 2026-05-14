@@ -154,7 +154,7 @@ const Today: React.FC = () => {
         </SectionCard>
 
         {/* Daily Vitals */}
-        <DailyVitalsPanel date={date} vitals={log?.vitals} />
+        <DailyVitalsPanel date={date} vitals={log?.vitals} bodyWeight={log?.bodyWeight} />
 
         {/* Today's Training */}
         <DailyTrainingCard todayEntry={todayEntry} todaySession={todaySession} />
