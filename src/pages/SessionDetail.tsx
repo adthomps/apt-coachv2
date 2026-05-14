@@ -9,6 +9,7 @@ import Layout from '@/components/Layout';
 import PageHeader from '@/components/common/PageHeader';
 import SectionCard from '@/components/common/SectionCard';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
+import HeartRateZoneBar from '@/components/sessions/HeartRateZoneBar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
