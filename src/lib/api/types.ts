@@ -520,6 +520,8 @@ export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes'>, string
   stepsCount: 'Steps',
   waistCircumferenceIn: 'Waist (in)',
   restingHeartRate: 'Resting HR (bpm)',
+  bloodGlucoseMgDl: 'Blood Glucose (mg/dL)',
+  waterIntakeOz: 'Water (oz)',
 };
 
 export interface DailyLog {
