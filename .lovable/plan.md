@@ -1,56 +1,70 @@
-## Goal
+# Today Page Redesign
 
-Apply [APT principles](https://github.com/adthomps/apt-principles) (Accurate, Practical, Trustworthy — clarity, source attribution, low cognitive load, progressive disclosure) to the health UI, and reorganize inputs to match the tracking matrix you provided. No new business logic — pure UI/IA + lightweight form fields routed to existing APIs.
+Re-layout `/today` into a two-column dashboard matching the uploaded mock. Frontend-only — no API or business-logic changes. Uses existing data hooks; signals/cards derive from data already in state.
 
-## Tracking matrix → UI placement
+## Layout
 
-| Surface | What lives there | Cadence |
-|---|---|---|
-| **Today (`/today`)** — Day Page | Apple Health daily: steps, glucose, SpO2, ECG (rhythm chip), respiratory rate, sleep score, water intake. Lumen score. Withings Scale (weight, body scan). Withings BeamO (body temp). Withings BPM (BP). | Daily |
-| **Sessions (`/sessions/:id`)** | Apple Fitness per-session: active cal, total cal, avg HR, HR zones 1–5, exercise effort/RPE, start/end time. Already partially there — surface zones + effort. | Per session |
-| **Admin → Imports** | JSON imports: Apple Health (blood panel + vitals export), Dexa/BodySpec, Rythm Health, Skulpt Chisel (regional fat/muscle L/R arms+legs+torso). | Monthly / yearly |
-| **Health hub (`/health`)** | Read-only overview: ground truth (DEXA, Rythm) on top, context sources below with sparklines. | Always |
+Desktop (≥lg): two columns, left = inputs/meals, right = context/calendar/signals.
+Tablet/mobile: single column, ordered as below.
 
-## APT-style UI changes
+```
+┌──────────────────────────────────────────────────────────┐
+│ TodayHeader: "Thursday, May 14"                          │
+│ subline: "3 of 8 inputs logged · 5 pending · AI 07:42"   │
+│ actions: ‹ Prev · Today · Next › · Refresh AI            │
+├──────────────────────────────────────────────────────────┤
+│ AI Direction Banner (one paragraph, refreshable)         │
+├───────────────────────────────┬──────────────────────────┤
+│ Daily Inputs card             │ Mini calendar (month)    │
+│  - status chips (logged/pending) - dot per logged day   │
+│  - "click any to edit"        │  - "View / back fill"    │
+│  - 4 KPI tiles row            │                          │
+├───────────────────────────────┼──────────────────────────┤
+│ Nutrition Goals card          │ Year/Month Signals       │
+│  - macros + bars              │  - DEXA / Rythm / Apple  │
+├───────────────────────────────┼──────────────────────────┤
+│ Meals (B/L/D/Snacks)          │ Changes To Work On Today │
+│                               │  - Nutrition / Training  │
+│                               │  - Week direction        │
+└───────────────────────────────┴──────────────────────────┘
+```
 
-1. **Today page restructure** — replace the flat `DailyVitalsPanel` with a tabbed/segmented "Daily Signals" card:
-   - Tabs: **Apple Health** · **Withings** · **Lumen**
-   - Each tab shows compact field rows grouped by source so attribution is obvious. Source badge + "last imported X ago" per group.
-   - ECG = 3-state chip (Normal / AFib / Inconclusive). Sleep score = 0–100 with color band. Glucose = mg/dL numeric.
-   - Add `bloodGlucoseMgDl` and `waterIntakeOz` to `DailyVitals` type (additive).
+## New components (presentation only)
 
-2. **Sessions detail enhancement** — extend `SessionMetrics` with `hrZoneSecs?: [z1,z2,z3,z4,z5]` and surface a stacked HR-zone bar + per-exercise effort column in `SessionDetail.tsx`. Keep existing fields.
+- `TodayHeader.tsx` — title, status line, prev/today/next + Refresh AI buttons.
+- `AIDirectionBanner.tsx` — single accent-bordered card; copy from `protocol.ts` recommendation; "last refreshed" timestamp.
+- `DailyInputsCard.tsx` — replaces current `DailySignalsTabs` UX.
+  - Status chip row: each tracked field shown as a pill — green check if `vitals[key]` set, amber clock if not (e.g. "Weight · 204.7 lbs", "Temperature · pending").
+  - Click chip → inline popover/sheet to edit just that field (reuses existing mutation hooks).
+  - Bottom row: 4 KPI tiles for the headline numbers (Weight, Body Fat, BP, Steps) using existing `KpiStat`.
+- `MiniMonthCalendar.tsx` — month grid; dot per day where `dailyLog` exists; current day highlighted; legend "Complete / Partial"; CTA "View / back fill past days" linking to a date picker (route param `?date=`).
+- `YearMonthSignalsCard.tsx` — list of ground-truth signals grouped by source with status badge (Act/Watch/Good). Pulls from latest snapshot, blood panel, DEXA compare deltas.
+- `ChangesTodayCard.tsx` — three stacked notes (Nutrition / Training / Week direction), generated from existing nutrition gap math + schedule + adaptive engine output.
 
-3. **Admin → Imports reorg** — group importers into 3 sections with consistent card pattern:
-   - **Ground truth (monthly/yearly):** BodySpec DEXA, Rythm Health, Apple Health Labs (MyChart JSON).
-   - **Body composition context:** Skulpt Chisel (with per-region preview table: L/R arms, L/R legs, torso fat & muscle).
-   - **Vitals context:** Withings Scale, Withings BPM, Withings BeamO, Apple Health Vitals, Lumen.
-   - Each card uses same shell: title, source badge, cadence chip, dropzone/textarea, preview, commit.
+## Edits
 
-4. **Health hub polish** — add the "Ground truth vs context" legend at top (already built `GroundTruthLegend.tsx`), make ground-truth cards visually heavier (border + accent), context cards lighter. Sparklines use muted strokes.
+- `src/pages/Today.tsx` — recompose into the grid above; wire date param for prev/next/back-fill; keep nutrition/meals logic intact.
+- `src/components/daily/DailyVitalsPanel.tsx` — repurpose as `DailyInputsCard` host (or replace import).
+- `src/components/daily/DailySignals.tsx` — extend to feed `ChangesTodayCard` (split into nutrition / training / week buckets).
+- `src/components/daily/NutritionTargetsPanel.tsx` — minor: add "Why this matters" trigger inline with goal/activity chips per mock.
 
-5. **APT visual consistency**:
-   - Single H1 per page; section cards via existing `SectionCard`.
-   - Source badge component (`<SourceBadge source="apple_health" />`) reused across Today, Sessions, Admin, Health.
-   - All numbers right-aligned in tables, units in muted-foreground, deltas via existing `DeltaValue`.
-   - Empty states use `EmptyState` with a clear next action ("Import from Admin →").
+## Interactions
 
-## Files
+- Status chip click → field-level edit popover (no full-form modal).
+- Prev/Next day buttons update `?date=YYYY-MM-DD`; default = today.
+- Refresh AI → re-runs protocol recommendation, updates timestamp.
+- Calendar day click → navigates to `/today?date=...`.
 
-**Created**
-- `src/components/health/SourceBadge.tsx` — unified source chip
-- `src/components/daily/DailySignalsTabs.tsx` — tabbed Today panel (replaces inline grid in `DailyVitalsPanel`)
-- `src/components/sessions/HeartRateZoneBar.tsx`
+## Out of scope
 
-**Edited**
-- `src/lib/api/types.ts` — add `bloodGlucoseMgDl`, `waterIntakeOz` to `DailyVitals`; add `hrZoneSecs` to `SessionMetrics`
-- `src/components/daily/DailyVitalsPanel.tsx` — render `DailySignalsTabs`
-- `src/pages/Today.tsx` — pass source-attributed data
-- `src/pages/SessionDetail.tsx` — HR zone bar + effort column
-- `src/pages/Admin.tsx` — regroup importer sections (Ground truth / Body comp / Vitals)
-- `src/pages/Health.tsx` — apply ground-truth visual hierarchy
-- `.lovable/plan.md` — replace prior plan
+- New backend fields, real device sync, schema changes.
+- Adaptive engine logic changes (only consume existing outputs).
+- Session detail / Admin / Health pages.
 
-**Out of scope:** OAuth to any vendor, real-time sync, changes to nutrition/protocol math, new DB schemas (mock layer only). BeamO + Lumen parsers stay beta until you upload samples.
+## Acceptance
 
-Approve and I'll implement.
+- `/today` matches mock structure on desktop and stacks cleanly on mobile.
+- Each daily input shows logged/pending state and is editable in one click.
+- Date navigation + back-fill calendar work via URL param.
+- AI banner + changes panel render from existing protocol/nutrition data.
+- Type-checks pass; no business-logic regressions.
