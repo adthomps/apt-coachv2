@@ -1,44 +1,52 @@
 import React, { useMemo, useState } from 'react';
-import { Scale } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import PageHeader from '@/components/common/PageHeader';
-import SectionCard from '@/components/common/SectionCard';
 import NutritionBar from '@/components/daily/NutritionBar';
 import MealCard from '@/components/daily/MealCard';
 import DailyTrainingCard from '@/components/daily/DailyTrainingCard';
-import DailySignals from '@/components/daily/DailySignals';
-import MetricExplainer from '@/components/health/MetricExplainer';
+import SectionCard from '@/components/common/SectionCard';
 import NutritionTargetsPanel from '@/components/daily/NutritionTargetsPanel';
-import DailyVitalsPanel from '@/components/daily/DailyVitalsPanel';
-import { Input } from '@/components/ui/input';
-import { useDailyLog, useAddMeal, useDeleteMeal, useLogWeight, useSnapshots, useSchedule, useSessions, useActiveNutritionGoal } from '@/hooks/use-api-queries';
+import TodayHeader from '@/components/daily/TodayHeader';
+import AIDirectionBanner from '@/components/daily/AIDirectionBanner';
+import DailyInputsCard, { countLoggedInputs, DAILY_INPUT_TOTAL } from '@/components/daily/DailyInputsCard';
+import MiniMonthCalendar from '@/components/daily/MiniMonthCalendar';
+import YearMonthSignalsCard, { type Signal } from '@/components/daily/YearMonthSignalsCard';
+import ChangesTodayCard, { type ChangeNote } from '@/components/daily/ChangesTodayCard';
+import {
+  useDailyLog, useAddMeal, useDeleteMeal, useSnapshots, useSchedule,
+  useSessions, useActiveNutritionGoal, useBloodPanels,
+} from '@/hooks/use-api-queries';
 import { computeNutritionTargets, defaultTargets } from '@/lib/nutrition-targets';
+import { getRecommendation } from '@/lib/protocol';
 import type { MealSlot, ProgressCompare, Snapshot } from '@/lib/api/types';
 import { MEAL_SLOT_LABELS } from '@/lib/api/types';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
-
-const formatDate = () => {
-  const d = new Date();
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-};
-
 const isWithings = (s: Snapshot) => (s.provider || '').toLowerCase() === 'withings';
 
 const Today: React.FC = () => {
-  const date = todayStr();
+  const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const date = params.get('date') ?? todayStr();
+  const setDate = (d: string) => {
+    const next = new URLSearchParams(params);
+    if (d === todayStr()) next.delete('date'); else next.set('date', d);
+    setParams(next, { replace: true });
+  };
+
   const { data: log } = useDailyLog(date);
   const { data: snapshots = [] } = useSnapshots();
   const { data: scheduleEntries = [] } = useSchedule();
   const { data: sessions = [] } = useSessions();
+  const { data: bloodPanels = [] } = useBloodPanels();
   const { data: activeGoal = null } = useActiveNutritionGoal(date);
   const addMeal = useAddMeal();
   const deleteMeal = useDeleteMeal();
-  const logWeight = useLogWeight();
 
-  const [weightInput, setWeightInput] = useState('');
+  const [aiRefreshedAt, setAiRefreshedAt] = useState<string>(() => new Date().toISOString());
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Latest DEXA snapshot for nutrition targets
+  // DEXA snapshots → nutrition targets
   const dexaSnapshots = useMemo(
     () => snapshots.filter(s => !isWithings(s)).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
     [snapshots],
@@ -46,7 +54,6 @@ const Today: React.FC = () => {
   const latestDexa = dexaSnapshots[0];
   const previousDexa = dexaSnapshots[1];
 
-  // Build compare if we have two scans
   const compare = useMemo<ProgressCompare | undefined>(() => {
     if (!latestDexa || !previousDexa) return undefined;
     const cur = latestDexa.bodyComposition;
@@ -70,26 +77,128 @@ const Today: React.FC = () => {
     return computeNutritionTargets(latestDexa, compare, activeGoal ?? undefined);
   }, [latestDexa, compare, activeGoal]);
 
-  // Consumed totals
   const consumed = useMemo(() => {
     if (!log) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
-    const allMeals = Object.values(log.meals).flat();
-    return allMeals.reduce(
-      (acc, m) => ({ calories: acc.calories + m.calories, protein: acc.protein + m.protein, carbs: acc.carbs + m.carbs, fat: acc.fat + m.fat }),
+    return Object.values(log.meals).flat().reduce(
+      (a, m) => ({ calories: a.calories + m.calories, protein: a.protein + m.protein, carbs: a.carbs + m.carbs, fat: a.fat + m.fat }),
       { calories: 0, protein: 0, carbs: 0, fat: 0 },
     );
   }, [log]);
 
-  // Today's schedule + session
   const todayEntry = useMemo(() => scheduleEntries.find(e => e.date.slice(0, 10) === date), [scheduleEntries, date]);
-  const todaySession = useMemo(() => {
-    if (!todayEntry?.sessionId) return undefined;
-    return sessions.find(s => s.id === todayEntry.sessionId);
-  }, [todayEntry, sessions]);
+  const todaySession = useMemo(
+    () => todayEntry?.sessionId ? sessions.find(s => s.id === todayEntry.sessionId) : undefined,
+    [todayEntry, sessions],
+  );
 
-  const handleWeightBlur = () => {
-    const w = parseFloat(weightInput);
-    if (w > 0) logWeight.mutate({ date, weight: w });
+  const recommendation = useMemo(
+    () => latestDexa ? getRecommendation(latestDexa, compare) : undefined,
+    [latestDexa, compare],
+  );
+
+  // Year/Month signals derived from compare + latest blood panel
+  const signals = useMemo<Signal[]>(() => {
+    const out: Signal[] = [];
+    if (compare) {
+      const fm = compare.changes.fatMass.value;
+      out.push({
+        id: 'fat',
+        status: fm > 0.5 ? 'act' : fm < -0.5 ? 'good' : 'watch',
+        title: fm > 0 ? 'Fat mass rising' : 'Fat mass holding',
+        detail: `${fm > 0 ? '+' : ''}${fm.toFixed(1)} lbs since last DEXA · ${compare.timeSpanDays}d`,
+        source: 'DEXA monthly',
+      });
+      const lm = compare.changes.leanMass.value;
+      out.push({
+        id: 'lean',
+        status: lm > 0 ? 'good' : lm < -0.5 ? 'act' : 'watch',
+        title: lm >= 0 ? 'Lean mass holding' : 'Lean mass declining',
+        detail: `${lm > 0 ? '+' : ''}${lm.toFixed(1)} lbs since last DEXA`,
+        source: 'DEXA monthly',
+      });
+    }
+    const latestPanel = bloodPanels.slice().sort((a, b) => b.panelDate.localeCompare(a.panelDate))[0];
+    if (latestPanel) {
+      const oor = latestPanel.markers.filter(m => m.status === 'outOfRange').length;
+      out.push({
+        id: 'panel',
+        status: oor >= 3 ? 'act' : oor > 0 ? 'watch' : 'good',
+        title: oor === 0 ? 'Blood markers in range' : 'Markers out of range',
+        detail: `${latestPanel.markers.length} markers · ${oor} OOR`,
+        source: 'Rythm monthly',
+      });
+    }
+    if (latestDexa?.boneDensity?.tScore != null) {
+      const t = latestDexa.boneDensity.tScore;
+      out.push({
+        id: 'bone',
+        status: t >= -1 ? 'good' : t >= -2.5 ? 'watch' : 'act',
+        title: 'Bone density',
+        detail: `T-score ${t.toFixed(1)}${latestDexa.boneDensity.zScore != null ? ` · Z-score ${latestDexa.boneDensity.zScore.toFixed(1)}` : ''}`,
+        source: 'DEXA',
+      });
+    }
+    return out;
+  }, [compare, bloodPanels, latestDexa]);
+
+  // Daily change notes
+  const changeNotes = useMemo<ChangeNote[]>(() => {
+    const notes: ChangeNote[] = [];
+    const proteinGap = targets.protein - consumed.protein;
+    const carbOver = consumed.carbs - targets.carbs;
+    if (proteinGap > 20) {
+      notes.push({
+        id: 'n1', category: 'nutrition',
+        label: 'Protein gap',
+        body: `Protein still ${Math.round(proteinGap)}g short — plan a post-session shake or cottage cheese.`,
+      });
+    } else if (carbOver > 20) {
+      notes.push({
+        id: 'n1', category: 'nutrition',
+        label: 'Carbs over',
+        body: `Carbs ${Math.round(carbOver)}g over target — opt for vegetable-based dinner rather than starchy carbs.`,
+      });
+    } else if (consumed.calories > 0) {
+      notes.push({
+        id: 'n1', category: 'nutrition',
+        label: 'Nutrition',
+        body: 'Macros are tracking on target — keep meal timing consistent through the evening.',
+      });
+    }
+
+    if (todaySession) {
+      const wt = todaySession.workoutName ?? 'Today\'s session';
+      notes.push({
+        id: 'n2', category: 'training',
+        label: 'Training',
+        body: `${wt}. RPE 7–8 max given recovery pressure. Add a 15-min Z2 warm-up to support cardiometabolic markers.`,
+      });
+    } else if (todayEntry) {
+      notes.push({
+        id: 'n2', category: 'training',
+        label: 'Training',
+        body: 'Scheduled session not started yet — open Training when ready.',
+      });
+    }
+
+    const completed = scheduleEntries.filter(e => e.status === 'completed').length;
+    const planned = scheduleEntries.length || 1;
+    notes.push({
+      id: 'n3', category: 'week',
+      label: 'Week direction',
+      body: `${completed} of ${planned} sessions complete this cycle. Aim to close remaining Z2 minutes for cardio direction.`,
+    });
+    return notes;
+  }, [targets, consumed, todaySession, todayEntry, scheduleEntries]);
+
+  const loggedCount = countLoggedInputs(log?.vitals, log?.bodyWeight);
+
+  const refreshAI = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setAiRefreshedAt(new Date().toISOString());
+      setRefreshing(false);
+    }, 600);
   };
 
   const slots: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snacks'];
@@ -97,70 +206,74 @@ const Today: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-6 animate-in fade-in duration-300">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <PageHeader title={`Today — ${formatDate()}`} />
-          <div className="flex items-center gap-2">
-            <Scale className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={log?.bodyWeight ? `${log.bodyWeight} lbs` : 'Morning weight (lbs)'}
-              value={weightInput}
-              onChange={e => setWeightInput(e.target.value)}
-              onBlur={handleWeightBlur}
-              onKeyDown={e => e.key === 'Enter' && handleWeightBlur()}
-              className="w-40 h-8 text-sm"
-              type="number"
-              min={0}
+        <TodayHeader
+          date={date}
+          loggedCount={loggedCount}
+          totalCount={DAILY_INPUT_TOTAL}
+          aiRefreshedAt={aiRefreshedAt}
+          onChangeDate={setDate}
+          onRefreshAI={refreshAI}
+          refreshing={refreshing}
+        />
+
+        {recommendation && (
+          <AIDirectionBanner text={recommendation.reasoning} refreshedAt={aiRefreshedAt} />
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* LEFT — 2/3 */}
+          <div className="lg:col-span-2 space-y-6">
+            <DailyInputsCard date={date} vitals={log?.vitals} bodyWeight={log?.bodyWeight} />
+
+            <SectionCard
+              title={
+                <span className="text-sm uppercase tracking-wide text-muted-foreground font-semibold">
+                  Nutrition Goals
+                </span>
+              }
+            >
+              <div className="space-y-4">
+                <NutritionTargetsPanel targets={targets} activeGoal={activeGoal} />
+                <NutritionBar consumed={consumed} targets={targets} />
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title={
+                <span className="text-sm uppercase tracking-wide text-muted-foreground font-semibold">
+                  Meals · {Math.round(consumed.calories).toLocaleString()} kcal
+                </span>
+              }
+            >
+              <div className="divide-y divide-border">
+                {slots.map(slot => (
+                  <MealCard
+                    key={slot}
+                    slot={slot}
+                    slotLabel={MEAL_SLOT_LABELS[slot]}
+                    entries={log?.meals[slot] ?? []}
+                    onAdd={data => addMeal.mutate({ date, slot, entry: data })}
+                    onDelete={mealId => deleteMeal.mutate({ date, slot, mealId })}
+                  />
+                ))}
+              </div>
+            </SectionCard>
+
+            <DailyTrainingCard todayEntry={todayEntry} todaySession={todaySession} />
+          </div>
+
+          {/* RIGHT — 1/3 */}
+          <div className="space-y-6">
+            <MiniMonthCalendar
+              selectedDate={date}
+              onSelect={setDate}
+              status={log ? { [date]: loggedCount === DAILY_INPUT_TOTAL ? 'complete' : loggedCount > 0 ? 'partial' : undefined } as Record<string, 'complete' | 'partial'> : {}}
+              onBackfill={() => navigate('/schedule')}
             />
+            <YearMonthSignalsCard signals={signals} onMoreInfo={() => navigate('/health')} />
+            <ChangesTodayCard notes={changeNotes} onRefresh={refreshAI} refreshing={refreshing} />
           </div>
         </div>
-
-        {/* Nutrition Summary */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-foreground">Nutrition</h2>
-          </div>
-          <NutritionBar consumed={consumed} targets={targets} />
-          <div className="mt-3">
-            <NutritionTargetsPanel targets={targets} activeGoal={activeGoal} />
-          </div>
-          <div className="mt-2">
-            <MetricExplainer
-              title="How your targets are calculated"
-              compact
-              explanation={{
-                what: targets.reasoning,
-                why: 'Targets are derived from your latest DEXA scan, current goal phase, and any manual overrides.',
-                focus: ['Hit your protein target first — it\'s the most important macro for body recomposition.'],
-              }}
-            />
-          </div>
-        </section>
-
-        {/* Meal Log */}
-        <SectionCard title="Meals">
-          <div className="divide-y divide-border">
-            {slots.map(slot => (
-              <MealCard
-                key={slot}
-                slot={slot}
-                slotLabel={MEAL_SLOT_LABELS[slot]}
-                entries={log?.meals[slot] ?? []}
-                onAdd={data => addMeal.mutate({ date, slot, entry: data })}
-                onDelete={mealId => deleteMeal.mutate({ date, slot, mealId })}
-              />
-            ))}
-          </div>
-        </SectionCard>
-
-        {/* Daily Vitals */}
-        <DailyVitalsPanel date={date} vitals={log?.vitals} bodyWeight={log?.bodyWeight} />
-
-        {/* Today's Training */}
-        <DailyTrainingCard todayEntry={todayEntry} todaySession={todaySession} />
-
-        {/* Daily Signals */}
-        <DailySignals consumed={consumed} targets={targets} />
       </div>
     </Layout>
   );
