@@ -355,7 +355,7 @@ const Dashboard: React.FC = () => {
               ? `Data stale — ${withingsStale} days ago. Refresh sync.`
               : 'Use as a daily trend check between DEXA scans.'}
             meta={latestWithings ? `${format(new Date(latestWithings.scanDate), 'MMM d, yyyy')}${withingsStale != null && withingsStale > 7 ? ' · stale' : ''}` : null}
-            href="/health"
+            href="/health?source=withings"
           />
         </div>
 
