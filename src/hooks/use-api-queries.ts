@@ -10,7 +10,7 @@ import {
   dailyLogApi, nutritionGoalApi, healthCheckinApi,
 } from '@/lib/api';
 import type { HealthCheckinFilter } from '@/lib/api/client';
-import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal, DailyVitals, HealthCheckin } from '@/lib/api/types';
+import type { CreateExerciseInput, CreateWorkoutInput, CreateProgramInput, Snapshot, BloodPanel, MealEntry, MealSlot, NutritionGoal, DailyVitals, DayGoals, HealthCheckin } from '@/lib/api/types';
 
 // ============ Query Keys ============
 
@@ -378,6 +378,15 @@ export function useUpdateDailyVitals() {
   return useMutation({
     mutationFn: ({ date, vitals }: { date: string; vitals: DailyVitals }) =>
       dailyLogApi.updateVitals(date, vitals),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
+export function useUpdateDayGoals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, goals }: { date: string; goals: DayGoals }) =>
+      dailyLogApi.updateGoals(date, goals),
     onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
   });
 }
