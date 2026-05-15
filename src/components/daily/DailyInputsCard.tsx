@@ -245,7 +245,23 @@ const DailyInputsCard: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
           Daily Inputs
         </span>
       }
-      actions={<span className="text-xs text-muted-foreground">click any to edit individually</span>}
+      actions={
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Edit all
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Daily inputs · {date}</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4">
+              <DailySignalsTabs date={date} vitals={vitals} bodyWeight={bodyWeight} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      }
     >
       <div className="space-y-4">
         <div className="flex flex-wrap gap-1.5">
