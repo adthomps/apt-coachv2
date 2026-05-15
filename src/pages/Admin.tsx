@@ -50,7 +50,7 @@ type ImportSource =
 
 const SOURCE_LABELS: Record<ImportSource, string> = {
   body_scan: 'Body Scan (BodySpec / DEXA) — ground truth',
-  blood_panel: 'Blood Panel (Rythm Health CSV) — ground truth',
+  blood_panel: 'Blood Panel (Rythm Health CSV or JSON) — ground truth',
   apple_health_labs: 'Apple Health Labs (PDF or FHIR JSON)',
   withings_scale: 'Withings Body / Scale (CSV)',
   withings_bpm: 'Withings BPM Vision (CSV)',
