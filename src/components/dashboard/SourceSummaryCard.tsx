@@ -4,6 +4,8 @@ import { ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import StatusBadge from '@/components/common/StatusBadge';
+import MetricExplainer from '@/components/health/MetricExplainer';
+import type { MetricKey } from '@/lib/health/metric-glossary';
 import { cn } from '@/lib/utils';
 
 type Status = 'optimal' | 'average' | 'outOfRange' | 'muted';
@@ -27,6 +29,8 @@ interface Props {
   stats: [SourceStat, SourceStat];
   priorityTitle: string;
   priorityBody: string;
+  priorityMetricKey?: MetricKey;
+  food?: string | null;
   meta: string | null;
   href: string;
 }
@@ -38,7 +42,9 @@ const DELTA_CLASS = {
   muted: 'text-muted-foreground',
 };
 
-const SourceSummaryCard: React.FC<Props> = ({ title, status, stats, priorityTitle, priorityBody, meta, href }) => (
+const SourceSummaryCard: React.FC<Props> = ({
+  title, status, stats, priorityTitle, priorityBody, priorityMetricKey, food, meta, href,
+}) => (
   <Card className="apt-hover-lift flex flex-col">
     <CardContent className="pt-5 flex-1 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
@@ -60,10 +66,21 @@ const SourceSummaryCard: React.FC<Props> = ({ title, status, stats, priorityTitl
         ))}
       </div>
 
-      <div className="flex-1">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Priority Action</p>
-        <p className="text-sm font-semibold text-foreground leading-snug">{priorityTitle}</p>
-        <p className="text-xs text-muted-foreground leading-snug mt-1">{priorityBody}</p>
+      <div className="flex-1 space-y-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Priority Action</p>
+          <p className="text-sm font-semibold text-foreground leading-snug">{priorityTitle}</p>
+          <p className="text-xs text-muted-foreground leading-snug mt-1">{priorityBody}</p>
+          {priorityMetricKey && (
+            <MetricExplainer metricKey={priorityMetricKey} compact title="Why this is the priority" />
+          )}
+        </div>
+        {food && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Food Guidance</p>
+            <p className="text-xs text-muted-foreground leading-snug">{food}</p>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t border-border/60">
@@ -79,3 +96,4 @@ const SourceSummaryCard: React.FC<Props> = ({ title, status, stats, priorityTitl
 );
 
 export default SourceSummaryCard;
+

@@ -12,7 +12,7 @@ import AIHealthSummaryCard from '@/components/dashboard/AIHealthSummaryCard';
 import SignalChipStrip, { type SignalChip } from '@/components/dashboard/SignalChipStrip';
 import SourceSummaryCard, { type SourceStat } from '@/components/dashboard/SourceSummaryCard';
 import StatTilesCard, { type StatTile } from '@/components/dashboard/StatTilesCard';
-import HealthDirectionGrid from '@/components/dashboard/HealthDirectionGrid';
+
 import { Button } from '@/components/ui/button';
 import {
   useSnapshots, useBloodPanels, useSchedule, useSessions, useDailyLog,
@@ -313,7 +313,7 @@ const Dashboard: React.FC = () => {
         {/* 2. Signal chip strip */}
         <SignalChipStrip chips={chips} />
 
-        {/* 3. 3-up source cards (mock style) */}
+        {/* 3. 3-up source cards (consolidated) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <SourceSummaryCard
             title="DEXA"
@@ -324,6 +324,8 @@ const Dashboard: React.FC = () => {
             ]}
             priorityTitle={latestDexa ? dexaPriorityTitle : 'Import a DEXA scan'}
             priorityBody={latestDexa ? dexaPriorityBody : 'Set a baseline to unlock body composition insights.'}
+            priorityMetricKey={bodyInsights[0]?.metricKey}
+            food={dexaTopFood?.title ?? null}
             meta={latestDexa ? format(new Date(latestDexa.scanDate), 'MMM d, yyyy') : null}
             href="/health"
           />
@@ -336,6 +338,8 @@ const Dashboard: React.FC = () => {
             ]}
             priorityTitle={latestPanel ? (rythmTopMarker?.title ?? 'All markers in range') : 'Import a blood panel'}
             priorityBody={latestPanel ? (rythmTopMarker?.actions?.[0] ?? 'Keep current habits.') : 'Surface marker insights and direction.'}
+            priorityMetricKey={rythmTopMarker?.metricKey}
+            food={panelInsights.find(i => i.category === 'food')?.actions?.[0] ?? null}
             meta={latestPanel ? format(new Date(latestPanel.panelDate), 'MMM d, yyyy') : null}
             href="/health"
           />
@@ -355,39 +359,31 @@ const Dashboard: React.FC = () => {
           />
         </div>
 
-        {/* 4. Bottom row: Training Pulse + Apple Health + Supporting Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* 4. Training Pulse + Apple Health */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <StatTilesCard title="Training Pulse" tiles={trainingTiles} />
           <StatTilesCard title="Apple Health · Today" tiles={appleTiles} />
-          {supportingInsights.length > 0 ? (
-            <AIInsightsPanel
-              insights={supportingInsights.slice(0, 3)}
-              title="Supporting Insights"
-              description="Evidence-cited signals."
-              emptyTitle="No additional signals"
-            />
-          ) : (
-            <SectionCard
-              title={
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Supporting Insights
-                </span>
-              }
-            >
-              <p className="text-xs text-muted-foreground italic">No additional signals yet.</p>
-            </SectionCard>
-          )}
         </div>
 
-        {/* 5. Detailed Health Direction grid (kept) */}
-        <HealthDirectionGrid
-          latestDexa={latestDexa}
-          latestWithings={latestWithings}
-          latestPanel={latestPanel}
-          bodyInsights={bodyInsights}
-          panelInsights={panelInsights}
-          compare={compare}
-        />
+        {/* 5. Supporting Insights — own row */}
+        {supportingInsights.length > 0 ? (
+          <AIInsightsPanel
+            insights={supportingInsights.slice(0, 6)}
+            title="Supporting Insights"
+            description="Every recommendation cites the scan or marker it came from."
+            emptyTitle="No additional signals"
+          />
+        ) : (
+          <SectionCard
+            title={
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                Supporting Insights
+              </span>
+            }
+          >
+            <p className="text-xs text-muted-foreground italic">No additional signals yet.</p>
+          </SectionCard>
+        )}
       </div>
     </Layout>
   );
