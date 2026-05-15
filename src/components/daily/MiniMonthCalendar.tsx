@@ -14,7 +14,7 @@ interface Props {
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-const MiniMonthCalendar: React.FC<Props> = ({ selectedDate, onSelect, status = {}, onBackfill }) => {
+const MiniMonthCalendar: React.FC<Props> = ({ selectedDate, onSelect, status = {} }) => {
   const sel = parseISO(selectedDate);
   const [cursor, setCursor] = useState(() => startOfMonth(sel));
 
