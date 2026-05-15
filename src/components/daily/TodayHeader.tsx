@@ -20,7 +20,7 @@ const shift = (date: string, days: number) =>
 const todayStr = () => format(new Date(), 'yyyy-MM-dd');
 
 const TodayHeader: React.FC<Props> = ({
-  date, loggedCount, totalCount, aiRefreshedAt, onChangeDate, onRefreshAI, onBackfill, refreshing,
+  date, loggedCount, totalCount, aiRefreshedAt, onChangeDate, onRefreshAI, refreshing,
 }) => {
   const pending = Math.max(totalCount - loggedCount, 0);
   const heading = format(parseISO(date), 'EEEE, MMMM d');
@@ -44,11 +44,6 @@ const TodayHeader: React.FC<Props> = ({
         <Button variant="outline" size="sm" onClick={() => onChangeDate(shift(date, 1))}>
           Next <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
-        {onBackfill && (
-          <Button variant="outline" size="sm" onClick={onBackfill}>
-            <CalendarDays className="h-4 w-4 mr-1.5" /> Back fill
-          </Button>
-        )}
         <Button variant="outline" size="sm" onClick={onRefreshAI} disabled={refreshing}>
           <Sparkles className="h-4 w-4 mr-1.5" /> Refresh AI
         </Button>
