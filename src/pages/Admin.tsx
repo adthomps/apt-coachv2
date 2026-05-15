@@ -282,7 +282,8 @@ const Admin: React.FC = () => {
           toast({ title: 'Body scan imported' });
         }
       } else if (source === 'blood_panel') {
-        const result = parseRythmHealthCsv(rawText);
+        const isJson = rawText.trim().startsWith('{') || rawText.trim().startsWith('[');
+        const result = isJson ? parseRythmHealthJson(rawText) : parseRythmHealthCsv(rawText);
         if (!result.data) throw new Error('Validation failed');
         const saved = await createBloodPanel.mutateAsync(result.data.panelInput);
         try {
