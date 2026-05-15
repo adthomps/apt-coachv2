@@ -12,6 +12,8 @@ import DailyInputsCard, { countLoggedInputs, DAILY_INPUT_TOTAL } from '@/compone
 import MiniMonthCalendar from '@/components/daily/MiniMonthCalendar';
 import YearMonthSignalsCard, { type Signal } from '@/components/daily/YearMonthSignalsCard';
 import ChangesTodayCard, { type ChangeNote } from '@/components/daily/ChangesTodayCard';
+import MonthDirectionCard, { type DirectionTile } from '@/components/daily/MonthDirectionCard';
+import DayGoalsCard, { type DayGoal } from '@/components/daily/DayGoalsCard';
 import {
   useDailyLog, useAddMeal, useDeleteMeal, useSnapshots, useSchedule,
   useSessions, useActiveNutritionGoal, useBloodPanels,
