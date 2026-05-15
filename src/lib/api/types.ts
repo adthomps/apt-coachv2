@@ -489,7 +489,35 @@ export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
   snacks: 'Snacks',
 };
 
-export interface DailyVitals {
+export type LumenEvent = 'wake_up' | 'pre_workout' | 'post_workout' | 'pre_meal' | 'post_meal' | 'fasting' | 'bedtime';
+
+export const LUMEN_EVENTS: LumenEvent[] = ['wake_up', 'pre_workout', 'post_workout', 'pre_meal', 'post_meal', 'fasting', 'bedtime'];
+
+export const LUMEN_EVENT_LABELS: Record<LumenEvent, string> = {
+  wake_up: 'Wake Up',
+  pre_workout: 'Pre-Workout',
+  post_workout: 'Post-Workout',
+  pre_meal: 'Pre-Meal',
+  post_meal: 'Post-Meal',
+  fasting: 'Fasting',
+  bedtime: 'Bedtime',
+};
+
+export const LUMEN_LEVEL_DEFINITIONS: Record<1 | 2 | 3 | 4 | 5, { label: string; detail: string }> = {
+  1: { label: 'Burning fat', detail: 'Morning goal 80–100% fat' },
+  2: { label: 'Mostly fat', detail: 'Morning goal 60–80% fat' },
+  3: { label: 'Mixed fuel', detail: '40–60% fat / carbs' },
+  4: { label: 'Mostly carbs', detail: '60–80% carbs' },
+  5: { label: 'Burning carbs', detail: '80–100% carbs' },
+};
+
+export interface LumenReading {
+  event: LumenEvent;
+  level?: 1 | 2 | 3 | 4 | 5;
+  time?: string; // HH:MM
+  notes?: string;
+}
+
   /** SpO2 percentage. */
   bloodOxygenPct?: number;
   systolicMmHg?: number;
