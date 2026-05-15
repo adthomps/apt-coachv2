@@ -51,31 +51,14 @@ const Today: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [dayGoalsOpen, setDayGoalsOpen] = useState(false);
 
-  // DEXA snapshots → nutrition targets
-  const dexaSnapshots = useMemo(
-    () => snapshots.filter(s => !isWithings(s)).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
+  // DEXA snapshots → nutrition targets (shared selectors so Today/Dashboard/Health match)
+  const dexaSnapshots = useMemo(() => selectDexaSorted(snapshots), [snapshots]);
+  const latestDexa = dexaSnapshots[0];
+
+  const compare = useMemo<ProgressCompare | undefined>(
+    () => selectDexaComparePair(snapshots),
     [snapshots],
   );
-  const latestDexa = dexaSnapshots[0];
-  const previousDexa = dexaSnapshots[1];
-
-  const compare = useMemo<ProgressCompare | undefined>(() => {
-    if (!latestDexa || !previousDexa) return undefined;
-    const cur = latestDexa.bodyComposition;
-    const prev = previousDexa.bodyComposition;
-    return {
-      currentSnapshot: latestDexa,
-      previousSnapshot: previousDexa,
-      changes: {
-        totalMass: { value: cur.totalMass - prev.totalMass, percentage: ((cur.totalMass - prev.totalMass) / prev.totalMass) * 100 },
-        fatMass: { value: cur.fatMass - prev.fatMass, percentage: ((cur.fatMass - prev.fatMass) / prev.fatMass) * 100 },
-        leanMass: { value: cur.leanMass - prev.leanMass, percentage: ((cur.leanMass - prev.leanMass) / prev.leanMass) * 100 },
-        bodyFatPercentage: { value: cur.bodyFatPercentage - prev.bodyFatPercentage, percentage: cur.bodyFatPercentage - prev.bodyFatPercentage },
-        regionalChanges: [],
-      },
-      timeSpanDays: Math.round((new Date(latestDexa.scanDate).getTime() - new Date(previousDexa.scanDate).getTime()) / 86400000),
-    };
-  }, [latestDexa, previousDexa]);
 
   const targets = useMemo(() => {
     if (!latestDexa) return defaultTargets();
