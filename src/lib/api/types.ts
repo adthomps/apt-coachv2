@@ -489,16 +489,43 @@ export const MEAL_SLOT_LABELS: Record<MealSlot, string> = {
   snacks: 'Snacks',
 };
 
-export type LumenEvent = 'wake_up' | 'pre_workout' | 'post_workout' | 'pre_meal' | 'post_meal' | 'fasting' | 'bedtime';
+export type LumenEvent =
+  | 'wake_up'
+  | 'pre_workout'
+  | 'post_workout'
+  | 'pre_breakfast'
+  | 'post_breakfast'
+  | 'pre_lunch'
+  | 'post_lunch'
+  | 'pre_dinner'
+  | 'post_dinner'
+  | 'fasting'
+  | 'bedtime';
 
-export const LUMEN_EVENTS: LumenEvent[] = ['wake_up', 'pre_workout', 'post_workout', 'pre_meal', 'post_meal', 'fasting', 'bedtime'];
+export const LUMEN_EVENTS: LumenEvent[] = [
+  'wake_up',
+  'pre_workout',
+  'post_workout',
+  'pre_breakfast',
+  'post_breakfast',
+  'pre_lunch',
+  'post_lunch',
+  'pre_dinner',
+  'post_dinner',
+  'fasting',
+  'bedtime',
+];
 
 export const LUMEN_EVENT_LABELS: Record<LumenEvent, string> = {
   wake_up: 'Wake Up',
   pre_workout: 'Pre-Workout',
   post_workout: 'Post-Workout',
-  pre_meal: 'Pre-Meal',
-  post_meal: 'Post-Meal',
+  pre_breakfast: 'Pre-Breakfast',
+  post_breakfast: 'Post-Breakfast',
+  pre_lunch: 'Pre-Lunch',
+  post_lunch: 'Post-Lunch',
+  pre_dinner: 'Pre-Dinner',
+  post_dinner: 'Post-Dinner',
   fasting: 'Fasting',
   bedtime: 'Bedtime',
 };
