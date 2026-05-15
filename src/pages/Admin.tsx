@@ -27,7 +27,7 @@ import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/hooks/use-api-queries';
 import {
-  parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson,
+  parseBodyspecJson, parseRythmHealthCsv, parseRythmHealthJson, parseEntityArrayJson,
   parseAppleHealthLabsJson, parseAppleHealthLabsPdfText, extractPdfText,
   parseWithingsScaleCsv, parseWithingsBpmCsv, parseWithingsBeamoJson,
   parseSkulptJson, parseLumenJson, parseAppleHealthVitalsJson,
