@@ -1,11 +1,21 @@
 import React from 'react';
-import { Lightbulb, Utensils, Dumbbell, Calendar, Heart } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Lightbulb, Utensils, Dumbbell, Calendar, Heart, ArrowUpRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import SectionCard from '@/components/common/SectionCard';
 import EmptyState from '@/components/common/EmptyState';
 import MetricExplainer from '@/components/health/MetricExplainer';
-import type { Insight, InsightCategory, InsightSeverity } from '@/lib/ai/insights';
+import type { Insight, InsightCategory, InsightSeverity, InsightSource } from '@/lib/ai/insights';
 import { format } from 'date-fns';
+
+const SOURCE_LABEL: Record<InsightSource, string> = {
+  dexa: 'DEXA',
+  rythm: 'Rythm Health',
+  withings: 'Withings',
+  apple: 'Apple / MyChart',
+  skulpt: 'Skulpt',
+  lumen: 'Lumen',
+};
 
 interface AIInsightsPanelProps {
   insights: Insight[];
