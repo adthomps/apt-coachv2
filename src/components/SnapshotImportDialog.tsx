@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import FormDialog from '@/components/common/FormDialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +19,8 @@ const KG_TO_LBS = 2.20462;
 const SnapshotImportDialog: React.FC<SnapshotImportDialogProps> = ({ open, onOpenChange }) => {
   const createMutation = useCreateSnapshot();
   const analyzeMutation = useAnalyzeSnapshot();
+
+  const [mode, setMode] = useState<'form' | 'json'>('form');
 
   // Form mode
   const [scanDate, setScanDate] = useState('');
@@ -126,75 +127,80 @@ const SnapshotImportDialog: React.FC<SnapshotImportDialogProps> = ({ open, onOpe
     }
   };
 
+  const submitLabel = createMutation.isPending
+    ? 'Saving…'
+    : mode === 'json' ? 'Validate & Save' : 'Save Snapshot';
+
+  const canSubmit = mode === 'json' ? !!jsonData.trim() : true;
+
   return (
-    <Dialog open={open} onOpenChange={o => { if (!o) resetForm(); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>Import Snapshot</DialogTitle>
-        </DialogHeader>
-        <Tabs defaultValue="form">
-          <TabsList className="w-full">
-            <TabsTrigger value="form" className="flex-1"><FileText className="mr-1.5 h-3.5 w-3.5" />Manual Entry</TabsTrigger>
-            <TabsTrigger value="json" className="flex-1"><Upload className="mr-1.5 h-3.5 w-3.5" />Paste JSON</TabsTrigger>
-          </TabsList>
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}
+      size="md"
+      title="Import Snapshot"
+      description="Body composition reading from BodySpec or another DEXA provider."
+      submitLabel={submitLabel}
+      onSubmit={mode === 'json' ? handleJsonSubmit : handleFormSubmit}
+      isSubmitting={createMutation.isPending}
+      canSubmit={canSubmit}
+    >
+      <Tabs value={mode} onValueChange={(v) => setMode(v as 'form' | 'json')}>
+        <TabsList className="w-full">
+          <TabsTrigger value="form" className="flex-1"><FileText className="mr-1.5 h-3.5 w-3.5" />Manual Entry</TabsTrigger>
+          <TabsTrigger value="json" className="flex-1"><Upload className="mr-1.5 h-3.5 w-3.5" />Paste JSON</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="form" className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Scan Date</Label>
-                <Input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Provider</Label>
-                <Input value={provider} onChange={e => setProvider(e.target.value)} placeholder="BodySpec" />
-              </div>
+        <TabsContent value="form" className="space-y-4 pt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Scan Date</Label>
+              <Input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Total Mass (lbs)</Label>
-                <Input type="number" step="0.1" value={totalMass} onChange={e => setTotalMass(e.target.value)} placeholder="185.0" />
-              </div>
-              <div className="space-y-2">
-                <Label>Body Fat %</Label>
-                <Input type="number" step="0.1" value={bodyFatPct} onChange={e => setBodyFatPct(e.target.value)} placeholder="15.0" />
-              </div>
+            <div className="space-y-2">
+              <Label>Provider</Label>
+              <Input value={provider} onChange={e => setProvider(e.target.value)} placeholder="BodySpec" />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Fat Mass (lbs)</Label>
-                <Input type="number" step="0.1" value={fatMass} onChange={e => setFatMass(e.target.value)} placeholder="27.0" />
-              </div>
-              <div className="space-y-2">
-                <Label>Lean Mass (lbs)</Label>
-                <Input type="number" step="0.1" value={leanMass} onChange={e => setLeanMass(e.target.value)} placeholder="150.0" />
-              </div>
-              <div className="space-y-2">
-                <Label>Bone Mass (lbs)</Label>
-                <Input type="number" step="0.1" value={boneMass} onChange={e => setBoneMass(e.target.value)} placeholder="7.0" />
-              </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Total Mass (lbs)</Label>
+              <Input type="number" step="0.1" value={totalMass} onChange={e => setTotalMass(e.target.value)} placeholder="185.0" />
             </div>
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
-            <Button className="w-full" onClick={handleFormSubmit} disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Saving...' : 'Save Snapshot'}
-            </Button>
-          </TabsContent>
+            <div className="space-y-2">
+              <Label>Body Fat %</Label>
+              <Input type="number" step="0.1" value={bodyFatPct} onChange={e => setBodyFatPct(e.target.value)} placeholder="15.0" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Fat Mass (lbs)</Label>
+              <Input type="number" step="0.1" value={fatMass} onChange={e => setFatMass(e.target.value)} placeholder="27.0" />
+            </div>
+            <div className="space-y-2">
+              <Label>Lean Mass (lbs)</Label>
+              <Input type="number" step="0.1" value={leanMass} onChange={e => setLeanMass(e.target.value)} placeholder="150.0" />
+            </div>
+            <div className="space-y-2">
+              <Label>Bone Mass (lbs)</Label>
+              <Input type="number" step="0.1" value={boneMass} onChange={e => setBoneMass(e.target.value)} placeholder="7.0" />
+            </div>
+          </div>
+          {formError && <p className="text-sm text-destructive">{formError}</p>}
+        </TabsContent>
 
-          <TabsContent value="json" className="space-y-4 pt-4">
-            <Textarea
-              placeholder='{"source": "bodyspec", "scan_date": "2024-01-15", "total_mass_lbs": 181.9, ...}'
-              value={jsonData}
-              onChange={e => { setJsonData(e.target.value); setJsonError(null); }}
-              rows={8}
-              className="font-mono text-sm"
-            />
-            {jsonError && <p className="text-sm text-destructive">{jsonError}</p>}
-            <Button className="w-full" onClick={handleJsonSubmit} disabled={!jsonData.trim() || createMutation.isPending}>
-              {createMutation.isPending ? 'Saving...' : 'Validate & Save'}
-            </Button>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+        <TabsContent value="json" className="space-y-4 pt-4">
+          <Textarea
+            placeholder='{"source": "bodyspec", "scan_date": "2024-01-15", "total_mass_lbs": 181.9, ...}'
+            value={jsonData}
+            onChange={e => { setJsonData(e.target.value); setJsonError(null); }}
+            rows={8}
+            className="font-mono text-sm"
+          />
+          {jsonError && <p className="text-sm text-destructive">{jsonError}</p>}
+        </TabsContent>
+      </Tabs>
+    </FormDialog>
   );
 };
 
