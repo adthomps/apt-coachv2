@@ -14,6 +14,7 @@ import YearMonthSignalsCard, { type Signal } from '@/components/daily/YearMonthS
 import ChangesTodayCard, { type ChangeNote } from '@/components/daily/ChangesTodayCard';
 import MonthDirectionCard, { type DirectionTile } from '@/components/daily/MonthDirectionCard';
 import DayGoalsCard, { type DayGoal } from '@/components/daily/DayGoalsCard';
+import DayGoalsEditorDialog from '@/components/daily/DayGoalsEditorDialog';
 import {
   useDailyLog, useAddMeal, useUpdateMeal, useDeleteMeal, useSnapshots, useSchedule,
   useSessions, useActiveNutritionGoal, useBloodPanels,
@@ -48,6 +49,7 @@ const Today: React.FC = () => {
 
   const [aiRefreshedAt, setAiRefreshedAt] = useState<string>(() => new Date().toISOString());
   const [refreshing, setRefreshing] = useState(false);
+  const [dayGoalsOpen, setDayGoalsOpen] = useState(false);
 
   // DEXA snapshots → nutrition targets
   const dexaSnapshots = useMemo(
