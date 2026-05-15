@@ -1,0 +1,32 @@
+{
+  "$schema": "https://apt-principles.dev/schemas/architecture-map.v1.json",
+  "project": "apt-coach-v2",
+  "canonicalDoctrine": "https://github.com/adthomps/apt-principles",
+  "layout": "single-app-staged-for-monorepo",
+  "layers": {
+    "pages":      { "path": "src/pages",      "imports": ["features", "components", "ui", "hooks", "services", "contexts"] },
+    "features":   { "path": "src/features",   "imports": ["components", "ui", "hooks", "services", "domain", "data/types"] },
+    "components": { "path": "src/components", "imports": ["ui", "domain", "data/types"] },
+    "ui":         { "path": "src/components/ui", "imports": [] },
+    "hooks":      { "path": "src/hooks",      "imports": ["data", "domain"] },
+    "services":   { "path": "src/services",   "imports": ["data", "domain"] },
+    "domain":     { "path": "src/domain",     "imports": ["data/types"] },
+    "data":       { "path": "src/data",       "imports": ["data/types"] }
+  },
+  "forbidden": [
+    { "from": "src/pages/**",       "to": "src/data/**",     "reason": "Pages must go through services/hooks." },
+    { "from": "src/components/**",  "to": "src/services/**", "reason": "Presentation must not call services." },
+    { "from": "src/components/**",  "to": "src/data/**",     "reason": "Presentation must not call the data layer." },
+    { "from": "src/domain/**",      "to": "react",           "reason": "Domain must be portable to a Worker." },
+    { "from": "src/domain/**",      "to": "react-router-dom","reason": "Domain must be portable to a Worker." },
+    { "from": "src/domain/**",      "to": "src/hooks/**",    "reason": "Domain must be portable to a Worker." },
+    { "from": "src/domain/**",      "to": "src/data/!(types)/**", "reason": "Domain operates on contracts, not transport." }
+  ],
+  "cloudflareTarget": {
+    "frontend": "Cloudflare Pages",
+    "api":      "Cloudflare Workers + Hono",
+    "db":       "D1",
+    "objects":  "R2",
+    "kv":       "KV"
+  }
+}
