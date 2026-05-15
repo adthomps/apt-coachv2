@@ -21,11 +21,11 @@ import {
 } from '@/hooks/use-api-queries';
 import { computeNutritionTargets, defaultTargets } from '@/lib/nutrition-targets';
 import { getRecommendation } from '@/lib/protocol';
-import type { MealSlot, ProgressCompare, Snapshot } from '@/lib/api/types';
+import type { MealSlot, ProgressCompare } from '@/lib/api/types';
 import { MEAL_SLOT_LABELS } from '@/lib/api/types';
+import { selectDexaSorted, selectDexaComparePair } from '@/lib/selectors/health';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
-const isWithings = (s: Snapshot) => (s.provider || '').toLowerCase() === 'withings';
 
 const Today: React.FC = () => {
   const [params, setParams] = useSearchParams();
