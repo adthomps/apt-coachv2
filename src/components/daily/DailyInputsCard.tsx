@@ -79,7 +79,7 @@ function valueOf(f: FieldDef, vitals?: DailyVitals, weight?: number): number | s
     return `${s}/${d}`;
   }
   if (f.kind === 'weight') return weight ?? vitals?.withingsWeightLbs;
-  return f.vitalKey ? (vitals?.[f.vitalKey] as number | undefined) : undefined;
+  return f.vitalKey ? (vitals?.[f.vitalKey] as number | string | undefined) : undefined;
 }
 
 interface ChipEditorProps {
