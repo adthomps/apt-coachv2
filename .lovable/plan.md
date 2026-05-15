@@ -1,78 +1,87 @@
-# Input Consistency Audit + Standardization Plan
+## Today page — input enhancements
 
-Goal: every place a user enters data — chips, popovers, modals, sheets, inline rows — uses the same APT primitives, spacing, tone, and color tokens.
+Three connected changes, all UI/presentation. No business-logic or backend changes beyond extending the `DailyVitals` Lumen fields.
 
-## What I found
+---
 
-### Today page input surfaces
-| Surface | Component | Current state |
-|---|---|---|
-| Chip popover (each vital) | `DailyInputsCard.StatusChip` + `ChipEditor` | Custom popover, **uses `amber-500` raw color** for "pending" state (off-system) |
-| Headline tile | `DailyInputsCard.HeadlineTile` | Custom card, OK tokens |
-| "Edit all" modal | `DailyInputsCard` → raw `Dialog` + `DailySignalsTabs` | Raw `DialogContent` (not `FormDialog`); no shared footer; tabs grid OK |
-| Per-source tab grid | `DailySignalsTabs` | Inline `Input` + `Label` + `Select`, blur-to-save, OK |
-| Meal entry add | `MealCard` + `MealEntryRow` | Inline input row, no labels, dashed "add" affordance — visually different from every other input on the page |
-| Meal entry edit | (none — only delete) | Missing edit path |
-| Day Goals | `DayGoalsCard` | Read-only tiles, "Edit" button → `/settings` |
+### 1. Lumen — multi-event capture
 
-### Across the rest of the app
-| File | Pattern | Issue |
-|---|---|---|
-| `ExerciseDialog`, `WorkoutDialog`, `Training` page dialogs | `FormDialog` | ✅ canonical |
-| `BloodPanelImportDialog` | raw `DialogContent` + bespoke footer + `bg-success/20` badge | Not using `FormDialog`; inconsistent footer; inline color tokens OK |
-| `SnapshotImportDialog` | raw `DialogContent` + tabs + full-width `Button` | Not using `FormDialog`; no standard footer |
-| `WithingsImportDialog` | raw `DialogContent` + full-width `Button` | Not using `FormDialog` |
-| `DeleteConfirmDialog` | `AlertDialog` | ✅ correct (destructive confirms) |
-| `Schedule` page | `Sheet` for day detail + `Dialog` for create | Mixed; create dialog should be `FormDialog` |
-| `DailyInputsCard` "Edit all" | raw `Dialog` | Should be `FormDialog` (size xl, no submit → use a "Done" close) |
+Replace the two-field Lumen model (`lumenMorningLevel`, `lumenPeakLevel`) with a per-event slot model.
 
-### Color/tone inconsistencies
-- `DailyInputsCard.StatusChip` → `border-amber-500/40 bg-amber-500/10 text-amber-500` (raw Tailwind palette).
-  → Should be `border-warning/40 bg-warning/10 text-warning` (semantic).
-- `BloodPanelImportDialog` → `bg-success/20 text-success border-success/30` for "Optimal" badge.
-  → Already semantic; keep, but route through `StatusBadge` component.
-- Several places still call `text-success` for "logged" chip — that's fine (success token), but worth confirming earlier "no green" rule. **Question for you below.**
+**Events** (in order): Wake Up, Pre-Workout, Post-Workout, Pre-Meal, Post-Meal, Fasting, Bedtime.
 
-## Standardization plan
+**Score legend** (always visible inline in the editor):
 
-### 1. One canonical input system
-Document and enforce three primitives:
+```
+1  Burning fat (morning goal 80–100% fat)
+2  Mostly fat (morning goal 60–80% fat)
+3  Mixed fat + carbs (40–60% fat)
+4  Mostly carbs (60–80% carbs)
+5  Burning carbs (80–100% carbs)
+```
 
-- **`FormDialog`** — all modal create/edit (sizes md / lg / xl). Always submit + cancel in shared footer.
-- **`PopoverEditor`** (new, extracted from `DailyInputsCard.ChipEditor`) — the inline single-field popover used by chips. Standard header (icon + label + source), one body slot, Save/Cancel footer.
-- **`InlineRow`** (new, generalizing `MealEntryRow`) — labeled compact row used inline inside cards. Enter to save, blur to commit, trash to delete.
+**Type changes** (`src/lib/api/types.ts`):
+- Add `LumenEvent = 'wake_up' | 'pre_workout' | 'post_workout' | 'pre_meal' | 'post_meal' | 'fasting' | 'bedtime'`
+- Add `LumenReading = { event: LumenEvent; level?: 1–5; time?: string; notes?: string }`
+- Add `DailyVitals.lumenReadings?: LumenReading[]`
+- Keep `lumenMorningLevel` / `lumenPeakLevel` as derived/back-compat (computed: Wake Up → morning; max of all → peak) to avoid touching protocol.ts and importers in this pass.
 
-### 2. Migrations
-- `BloodPanelImportDialog`, `SnapshotImportDialog`, `WithingsImportDialog` → wrap in `FormDialog` (size lg). Move JSON paste into the body, primary "Import" in shared footer, secondary tab toggle stays at top.
-- `Schedule` create-workout dialog → `FormDialog`.
-- `DailyInputsCard` "Edit all" modal → `FormDialog` size xl, single "Done" action (no submit needed since fields commit on blur).
-- `MealCard`/`MealEntryRow` → align to `InlineRow`: add labels above the four small inputs (P/C/F/Cal) on first row only, keep dashed-button affordance, add **Edit** action on existing entries (clicking entry opens `InlineRow` in edit mode).
+**UI** (new `LumenEventsEditor` rendered inside Daily Inputs "Edit all" dialog under the Lumen tab, replacing the current two selects):
+- One row per event: icon + label · `Select` (1–5) · optional time picker · short helper text describing that level.
+- Score legend table at top of the tab.
+- Chip on the Daily Inputs card stays a single "Lumen · {n logged}" chip; clicking opens the Lumen tab in the Edit-all dialog (popover on the chip removed for Lumen because a single value no longer represents the day).
 
-### 3. Color/tone pass
-- Replace all `amber-*` raw classes with `warning` semantic token (chip pending, any other occurrences).
-- Sweep for `green-*`, `emerald-*`, `lime-*` raw classes — none expected, confirm.
-- Confirm "logged" chip color: keep `success` (semantic green) **OR** switch to `primary` per the earlier "revisit green" note.
+---
 
-### 4. Spacing/typography pass
-- All dialog bodies use `space-y-5`, all field groups `space-y-2`, all labels `text-xs text-muted-foreground` (already in `DailySignalsTabs`).
-- All field grids: 2-col on mobile, 4-col on `md+` for short fields.
+### 2. Day Goals → modal editor
 
-## Out of scope
-- Backend/API changes
-- New input fields beyond the meal-entry edit path
-- Redesign of `Schedule` sheet (keep)
+Day Goals currently render as a read-only card with an "Edit goals" button that routes to `/settings`. Make it match the Daily Inputs pattern.
 
-## Question before I implement
+- New `DayGoalsEditorDialog` using `FormDialog` (size `lg`, submit "Save").
+- Fields: protein target (g, prefilled from nutrition target), step target, water target (L), session notes / training intent.
+- `DayGoalsCard` "Edit goals" opens this dialog instead of navigating away.
+- Persistence: store on `DailyLog.goals` (new optional field `{ proteinG?, steps?, waterL?, sessionNote? }`); fall back to derived defaults when absent. No new API surface — reuse `useUpdateDailyVitals`-style mutation extended to a `useUpdateDayGoals` hook against the existing daily log mock.
 
-Two open decisions — please pick:
+---
 
-**A. Pending/incomplete tone for chips:**
-- (i) `warning` (amber/orange) — current intent
-- (ii) `muted` (subtle gray) — quieter
+### 3. Nutrition Goals — consistent "set value" treatment
 
-**B. "Logged / on-target" tone (the green question):**
-- (i) Keep `success` (semantic green, no raw greens)
-- (ii) Switch to `primary` (your brand color) and reserve green for nothing
-- (iii) Use `accent`
+Today the `NutritionTargetsPanel` is in-page collapsible with Phase + Activity as toggles and per-macro fields under "Manual Overrides". Phase and Activity are also overrides of the auto baseline, so the framing is inconsistent.
 
-Once you answer, I'll execute the migrations + token sweep in one pass.
+Changes:
+- Move the entire panel into a modal: `NutritionTargetsDialog` (`FormDialog`, size `lg`).
+- The Nutrition Goals card surface becomes a compact summary row (phase chip · activity chip · kcal/P/C/F target) with a single **Edit targets** button → opens the dialog.
+- Inside the dialog, restructure as three field groups, all framed as "set values" (no separate "manual override" header):
+  1. **Goal phase** — toggle group (existing).
+  2. **Activity level** — toggle group (existing).
+  3. **Macro targets** — four numeric inputs prefilled with the auto-computed baseline; a per-field "Reset to auto" link clears the override. A small helper text shows the auto baseline next to each input.
+- Indicator: any field whose value differs from auto baseline shows a small `Overridden` dot (reuses existing `bg-accent` token), matching the pattern used in `NutritionBar`.
+- "Effective from" + Save move to the dialog footer (Save = primary action via FormDialog).
+
+---
+
+### Technical notes
+
+- All new modals use `FormDialog` for header/body/footer parity with the rest of the input standardization pass.
+- Color tokens only — `primary`/`muted`/`warning`/`accent`. No raw Tailwind colors.
+- No changes to `protocol.ts`, `nutrition-targets.ts` math, importers, or hooks beyond a new `useUpdateDayGoals` and Lumen reading writes. Existing consumers of `lumenMorningLevel`/`lumenPeakLevel` keep working via the derived back-compat values.
+
+### Files touched
+
+- `src/lib/api/types.ts` — Lumen types, `DailyLog.goals`.
+- `src/lib/api/mock-data.ts` + `src/lib/api/client.ts` — Lumen readings + day-goals read/write.
+- `src/hooks/use-api-queries.ts` — `useUpdateDayGoals`, Lumen reading mutation.
+- `src/components/daily/DailySignalsTabs.tsx` — Lumen tab swap to `LumenEventsEditor`.
+- `src/components/daily/LumenEventsEditor.tsx` (new).
+- `src/components/daily/DailyInputsCard.tsx` — Lumen chip becomes summary that opens Edit-all → Lumen tab.
+- `src/components/daily/DayGoalsCard.tsx` — `onEdit` opens dialog instead of navigating.
+- `src/components/daily/DayGoalsEditorDialog.tsx` (new).
+- `src/components/daily/NutritionTargetsPanel.tsx` — collapse into compact summary + trigger.
+- `src/components/daily/NutritionTargetsDialog.tsx` (new) — extracted form body in a `FormDialog`.
+- `src/pages/Today.tsx` — wiring.
+
+### Out of scope
+
+- Backend / D1 schema changes.
+- Importer changes for Lumen multi-event (still beta — keep current single-level mapping).
+- Recompute of protocol/recommendation logic from per-event Lumen.
