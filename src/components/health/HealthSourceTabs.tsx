@@ -52,7 +52,7 @@ const HealthSourceTabs: React.FC<Props> = ({ active, onChange, withingsSegment =
     </div>
 
     {active === 'withings' && onWithingsSegmentChange && (
-      <div className="flex items-center gap-1 text-xs text-muted-foreground border-l-2 border-primary/40 pl-3">
+      <div className="flex items-center gap-1 text-xs text-muted-foreground border-l-2 border-accent/40 pl-3">
         {WITHINGS_SEGMENTS.map((s, i) => {
           const isActive = withingsSegment === s.id;
           return (
