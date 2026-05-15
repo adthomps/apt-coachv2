@@ -74,9 +74,21 @@ const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
                 <span className="text-muted-foreground">{CATEGORY_ICON[ins.category]}</span>
                 <span className="font-medium text-foreground truncate">{ins.title}</span>
               </div>
-              <Badge variant="outline" className="text-xs capitalize shrink-0">
-                {ins.category}
-              </Badge>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {ins.sourceTab && (
+                  <Link
+                    to={`/health?source=${ins.sourceTab}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent hover:bg-accent/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`See in Health · ${SOURCE_LABEL[ins.sourceTab]}`}
+                  >
+                    {SOURCE_LABEL[ins.sourceTab]}
+                    <ArrowUpRight className="h-2.5 w-2.5" />
+                  </Link>
+                )}
+                <Badge variant="outline" className="text-xs capitalize">
+                  {ins.category}
+                </Badge>
+              </div>
             </div>
 
             <p className="text-sm text-muted-foreground leading-relaxed">{ins.rationale}</p>
