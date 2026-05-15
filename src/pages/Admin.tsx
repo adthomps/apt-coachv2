@@ -543,7 +543,7 @@ const Admin: React.FC = () => {
                     <h4 className="font-medium text-foreground">Available Sources</h4>
                     <ul className="space-y-1.5">
                       <li className="flex gap-2"><Activity className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Body Scan — BodySpec JSON, lbs or kg</span></li>
-                      <li className="flex gap-2"><Droplets className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Blood Panel — RythmHealth CSV</span></li>
+                      <li className="flex gap-2"><Droplets className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Blood Panel — RythmHealth CSV or JSON</span></li>
                       <li className="flex gap-2"><FileJson className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Exercises / Workouts / Programs — JSON arrays</span></li>
                     </ul>
                   </div>
