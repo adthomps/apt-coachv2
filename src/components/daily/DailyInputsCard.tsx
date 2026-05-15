@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import DailySignalsTabs from './DailySignalsTabs';
 import { useUpdateDailyVitals, useLogWeight } from '@/hooks/use-api-queries';
 import type { DailyVitals } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
@@ -243,7 +245,23 @@ const DailyInputsCard: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
           Daily Inputs
         </span>
       }
-      actions={<span className="text-xs text-muted-foreground">click any to edit individually</span>}
+      actions={
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Edit all
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Daily inputs · {date}</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4">
+              <DailySignalsTabs date={date} vitals={vitals} bodyWeight={bodyWeight} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      }
     >
       <div className="space-y-4">
         <div className="flex flex-wrap gap-1.5">
