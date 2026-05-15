@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Activity, Upload } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import PageHeader from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -15,9 +15,42 @@ import WithingsBeamoView from '@/components/health/views/WithingsBeamoView';
 import SkulptView from '@/components/health/views/SkulptView';
 import LumenView from '@/components/health/views/LumenView';
 
+const VALID_TABS: HealthSourceTab[] = ['dexa', 'rythm', 'apple', 'withings', 'skulpt', 'lumen'];
+const VALID_SEGMENTS: WithingsSegment[] = ['scale', 'bpm', 'beamo'];
+
 const Health: React.FC = () => {
-  const [active, setActive] = useState<HealthSourceTab>('dexa');
-  const [withingsSegment, setWithingsSegment] = useState<WithingsSegment>('scale');
+  const [params, setParams] = useSearchParams();
+  const sourceParam = params.get('source');
+  const segmentParam = params.get('segment');
+
+  const initialTab: HealthSourceTab =
+    VALID_TABS.includes(sourceParam as HealthSourceTab) ? (sourceParam as HealthSourceTab) : 'dexa';
+  const initialSegment: WithingsSegment =
+    VALID_SEGMENTS.includes(segmentParam as WithingsSegment) ? (segmentParam as WithingsSegment) : 'scale';
+
+  const [active, setActive] = useState<HealthSourceTab>(initialTab);
+  const [withingsSegment, setWithingsSegment] = useState<WithingsSegment>(initialSegment);
+
+  // Sync URL when user changes tabs (so links are shareable + back/forward works).
+  useEffect(() => {
+    const next = new URLSearchParams(params);
+    if (active === 'dexa') next.delete('source'); else next.set('source', active);
+    if (active === 'withings' && withingsSegment !== 'scale') next.set('segment', withingsSegment);
+    else next.delete('segment');
+    if (next.toString() !== params.toString()) setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, withingsSegment]);
+
+  // React to external URL changes (e.g. deep-link click).
+  useEffect(() => {
+    if (sourceParam && VALID_TABS.includes(sourceParam as HealthSourceTab) && sourceParam !== active) {
+      setActive(sourceParam as HealthSourceTab);
+    }
+    if (segmentParam && VALID_SEGMENTS.includes(segmentParam as WithingsSegment) && segmentParam !== withingsSegment) {
+      setWithingsSegment(segmentParam as WithingsSegment);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceParam, segmentParam]);
 
   return (
     <Layout>
