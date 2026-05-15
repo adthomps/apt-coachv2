@@ -18,10 +18,10 @@ interface Props {
 }
 
 const TONE_COLOR: Record<DayGoal['tone'], string> = {
-  good: 'text-success',
-  pending: 'text-amber-500',
-  over: 'text-destructive',
-  info: 'text-primary',
+  good: 'text-primary',
+  pending: 'text-muted-foreground',
+  over: 'text-warning',
+  info: 'text-accent',
 };
 
 const DayGoalsCard: React.FC<Props> = ({ goals, onEdit }) => (
