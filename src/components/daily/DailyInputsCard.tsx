@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import DailySignalsTabs from './DailySignalsTabs';
 import { useUpdateDailyVitals, useLogWeight } from '@/hooks/use-api-queries';
 import type { DailyVitals } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
