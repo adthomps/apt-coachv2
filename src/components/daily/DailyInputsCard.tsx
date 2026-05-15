@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Clock, Scale, Activity, HeartPulse, Footprints, Thermometer, Moon, Droplets, Flame, Wind, Edit2 } from 'lucide-react';
+import { Check, Clock, Scale, Activity, HeartPulse, Footprints, Thermometer, Moon, Droplets, Flame, Wind, Edit2, Waves } from 'lucide-react';
 import SectionCard from '@/components/common/SectionCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
