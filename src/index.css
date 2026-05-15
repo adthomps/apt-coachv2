@@ -111,6 +111,13 @@
   }
 }
 
+/* APT Color & Interaction Convention
+   - Primary CTA / link / focus ring → `bg-primary`/`text-primary` (blue 220).
+   - Selection / section identity / active tab → `bg-accent/15 text-accent border-accent/40` (teal 165).
+   - Value-compare chips → semantic only: success / destructive / warning / muted.
+   - Calm motion only — keep transitions ≤ 220ms.
+*/
+
 /* APT Animation System */
 @keyframes apt-fade-in {
   from { opacity: 0; }
