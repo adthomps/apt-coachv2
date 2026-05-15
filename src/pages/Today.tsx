@@ -317,6 +317,8 @@ const Today: React.FC = () => {
               </div>
             </SectionCard>
 
+            <DayGoalsCard goals={dayGoals} onEdit={() => navigate('/settings')} />
+
             <SectionCard
               title={
                 <span className="text-sm uppercase tracking-wide text-muted-foreground font-semibold">
@@ -339,8 +341,6 @@ const Today: React.FC = () => {
             </SectionCard>
 
             <DailyTrainingCard todayEntry={todayEntry} todaySession={todaySession} />
-
-            <DayGoalsCard goals={dayGoals} onEdit={() => navigate('/settings')} />
           </div>
 
           {/* RIGHT — 1/3 */}
