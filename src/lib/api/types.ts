@@ -550,7 +550,7 @@ export interface DailyVitals {
   notes?: string;
 }
 
-export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes' | 'ecgRhythm'>, string> = {
+export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes' | 'ecgRhythm' | 'lumenReadings'>, string> = {
   bloodOxygenPct: 'Blood Oxygen (%)',
   systolicMmHg: 'BP Systolic (mmHg)',
   diastolicMmHg: 'BP Diastolic (mmHg)',
