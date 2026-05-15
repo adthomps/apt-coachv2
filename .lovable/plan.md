@@ -1,70 +1,43 @@
-# Today Page Redesign
+## Goal
 
-Re-layout `/today` into a two-column dashboard matching the uploaded mock. Frontend-only — no API or business-logic changes. Uses existing data hooks; signals/cards derive from data already in state.
+The Today page and Admin importers already cover ~95% of the tracking matrix. Two real gaps and a small labeling pass remain.
 
-## Layout
+## Gap 1 — ECG missing from Today's chip grid
 
-Desktop (≥lg): two columns, left = inputs/meals, right = context/calendar/signals.
-Tablet/mobile: single column, ordered as below.
+Matrix lists "Electrocardiograms (ECG) · By Day · Apple Health · Day Page input." Today, ECG is editable only inside the **Edit all** dialog, so it doesn't show a status chip and a user can't tell it's pending.
 
-```
-┌──────────────────────────────────────────────────────────┐
-│ TodayHeader: "Thursday, May 14"                          │
-│ subline: "3 of 8 inputs logged · 5 pending · AI 07:42"   │
-│ actions: ‹ Prev · Today · Next › · Refresh AI            │
-├──────────────────────────────────────────────────────────┤
-│ AI Direction Banner (one paragraph, refreshable)         │
-├───────────────────────────────┬──────────────────────────┤
-│ Daily Inputs card             │ Mini calendar (month)    │
-│  - status chips (logged/pending) - dot per logged day   │
-│  - "click any to edit"        │  - "View / back fill"    │
-│  - 4 KPI tiles row            │                          │
-├───────────────────────────────┼──────────────────────────┤
-│ Nutrition Goals card          │ Year/Month Signals       │
-│  - macros + bars              │  - DEXA / Rythm / Apple  │
-├───────────────────────────────┼──────────────────────────┤
-│ Meals (B/L/D/Snacks)          │ Changes To Work On Today │
-│                               │  - Nutrition / Training  │
-│                               │  - Week direction        │
-└───────────────────────────────┴──────────────────────────┘
-```
+**Change:** add an ECG field to `FIELDS` in `src/components/daily/DailyInputsCard.tsx` as `kind: 'select'` mapped to `vitals.ecgRhythm` with options `normal | afib | inconclusive`. Render it as a chip alongside the others. No new types or hooks — `ecgRhythm` already exists on `DailyVitals` and the chip editor's `select` branch already handles select fields.
 
-## New components (presentation only)
+## Gap 2 — Rythm Health JSON importer
 
-- `TodayHeader.tsx` — title, status line, prev/today/next + Refresh AI buttons.
-- `AIDirectionBanner.tsx` — single accent-bordered card; copy from `protocol.ts` recommendation; "last refreshed" timestamp.
-- `DailyInputsCard.tsx` — replaces current `DailySignalsTabs` UX.
-  - Status chip row: each tracked field shown as a pill — green check if `vitals[key]` set, amber clock if not (e.g. "Weight · 204.7 lbs", "Temperature · pending").
-  - Click chip → inline popover/sheet to edit just that field (reuses existing mutation hooks).
-  - Bottom row: 4 KPI tiles for the headline numbers (Weight, Body Fat, BP, Steps) using existing `KpiStat`.
-- `MiniMonthCalendar.tsx` — month grid; dot per day where `dailyLog` exists; current day highlighted; legend "Complete / Partial"; CTA "View / back fill past days" linking to a date picker (route param `?date=`).
-- `YearMonthSignalsCard.tsx` — list of ground-truth signals grouped by source with status badge (Act/Watch/Good). Pulls from latest snapshot, blood panel, DEXA compare deltas.
-- `ChangesTodayCard.tsx` — three stacked notes (Nutrition / Training / Week direction), generated from existing nutrition gap math + schedule + adaptive engine output.
+Matrix says "Blood Panel (Rhythm Data) · By Month · Rythm Health · Admin Import Function for **Rhythm JSON**". `src/lib/importers/rythmhealth.ts` currently parses CSV only.
 
-## Edits
+**Change:**
+- Add `parseRythmHealthJson(text: string): ImportPreview` to `src/lib/importers/rythmhealth.ts` accepting either a flat marker array or `{ panelDate, markers: [...] }`.
+- Export it from `src/lib/importers/index.ts`.
+- In `src/pages/Admin.tsx`, detect file extension on the existing Rythm dropzone — `.json` → `parseRythmHealthJson`, `.csv` → `parseRythmHealthCsv`. Update hint text to "CSV or JSON".
 
-- `src/pages/Today.tsx` — recompose into the grid above; wire date param for prev/next/back-fill; keep nutrition/meals logic intact.
-- `src/components/daily/DailyVitalsPanel.tsx` — repurpose as `DailyInputsCard` host (or replace import).
-- `src/components/daily/DailySignals.tsx` — extend to feed `ChangesTodayCard` (split into nutrition / training / week buckets).
-- `src/components/daily/NutritionTargetsPanel.tsx` — minor: add "Why this matters" trigger inline with goal/activity chips per mock.
+## Polish — source labels match device names
 
-## Interactions
+Matrix uses precise device names. Current chip "source" labels are close but inconsistent.
 
-- Status chip click → field-level edit popover (no full-form modal).
-- Prev/Next day buttons update `?date=YYYY-MM-DD`; default = today.
-- Refresh AI → re-runs protocol recommendation, updates timestamp.
-- Calendar day click → navigates to `/today?date=...`.
+**Change in `DailyInputsCard.tsx` field defs:**
+- Body fat chip: source `Withings` → `Withings Scale`, label `Body fat` → `Body scan`
+- BP chip: source already `BPM Vision` → keep as `Withings BPM Vision`
+- Temperature chip: source `BeamO` → `Withings BeamO`
+- Weight chip: source `Withings` → `Withings Scale`
+
+These are display-string only — no data model impact.
 
 ## Out of scope
 
-- New backend fields, real device sync, schema changes.
-- Adaptive engine logic changes (only consume existing outputs).
-- Session detail / Admin / Health pages.
+- Skulpt Chisel **display** surface (segmental fat/muscle visualization on Health page) — import is already in place; rendering is a separate UX task.
+- Real device sync / OAuth — manual entry + JSON/CSV imports remain the entry model.
+- Schema or backend changes.
 
-## Acceptance
+## Files touched
 
-- `/today` matches mock structure on desktop and stacks cleanly on mobile.
-- Each daily input shows logged/pending state and is editable in one click.
-- Date navigation + back-fill calendar work via URL param.
-- AI banner + changes panel render from existing protocol/nutrition data.
-- Type-checks pass; no business-logic regressions.
+- `src/components/daily/DailyInputsCard.tsx` — add ECG chip, retune source labels
+- `src/lib/importers/rythmhealth.ts` — add `parseRythmHealthJson`
+- `src/lib/importers/index.ts` — export new parser
+- `src/pages/Admin.tsx` — branch on file extension for Rythm uploads, update hint
