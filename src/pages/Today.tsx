@@ -340,6 +340,8 @@ const Today: React.FC = () => {
             </SectionCard>
 
             <DailyTrainingCard todayEntry={todayEntry} todaySession={todaySession} />
+
+            <DayGoalsCard goals={dayGoals} onEdit={() => navigate('/settings')} />
           </div>
 
           {/* RIGHT — 1/3 */}
@@ -351,6 +353,7 @@ const Today: React.FC = () => {
               onBackfill={() => navigate('/schedule')}
             />
             <YearMonthSignalsCard signals={signals} onMoreInfo={() => navigate('/health')} />
+            <MonthDirectionCard tiles={monthTiles} />
             <ChangesTodayCard notes={changeNotes} onRefresh={refreshAI} refreshing={refreshing} />
           </div>
         </div>
