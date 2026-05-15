@@ -357,7 +357,7 @@ const Today: React.FC = () => {
               status={log ? { [date]: loggedCount === DAILY_INPUT_TOTAL ? 'complete' : loggedCount > 0 ? 'partial' : undefined } as Record<string, 'complete' | 'partial'> : {}}
               
             />
-            <YearMonthSignalsCard signals={signals} onMoreInfo={() => navigate('/health')} />
+            <YearMonthSignalsCard signals={signals} onMoreInfo={() => navigate('/health?source=dexa')} />
             <MonthDirectionCard tiles={monthTiles} />
             <ChangesTodayCard notes={changeNotes} onRefresh={refreshAI} refreshing={refreshing} />
           </div>
