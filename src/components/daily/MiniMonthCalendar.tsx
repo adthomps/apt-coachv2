@@ -77,9 +77,7 @@ const MiniMonthCalendar: React.FC<Props> = ({ selectedDate, onSelect, status = {
           <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Complete</span>
           <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Partial</span>
         </div>
-        <Button variant="outline" size="sm" className="w-full" onClick={onBackfill}>
-          <CalendarDays className="h-4 w-4 mr-1.5" /> View / back fill past days
-        </Button>
+        <p className="text-[10px] text-center text-muted-foreground">Tap any day to add or edit data.</p>
       </div>
     </SectionCard>
   );
