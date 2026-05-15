@@ -341,7 +341,7 @@ const Dashboard: React.FC = () => {
             priorityMetricKey={rythmTopMarker?.metricKey}
             food={panelInsights.find(i => i.category === 'food')?.actions?.[0] ?? null}
             meta={latestPanel ? format(new Date(latestPanel.panelDate), 'MMM d, yyyy') : null}
-            href="/health"
+            href="/health?source=rythm"
           />
           <SourceSummaryCard
             title="Withings"
