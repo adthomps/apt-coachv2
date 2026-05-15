@@ -27,7 +27,7 @@ import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/hooks/use-api-queries';
 import {
-  parseBodyspecJson, parseRythmHealthCsv, parseEntityArrayJson,
+  parseBodyspecJson, parseRythmHealthCsv, parseRythmHealthJson, parseEntityArrayJson,
   parseAppleHealthLabsJson, parseAppleHealthLabsPdfText, extractPdfText,
   parseWithingsScaleCsv, parseWithingsBpmCsv, parseWithingsBeamoJson,
   parseSkulptJson, parseLumenJson, parseAppleHealthVitalsJson,
@@ -50,7 +50,7 @@ type ImportSource =
 
 const SOURCE_LABELS: Record<ImportSource, string> = {
   body_scan: 'Body Scan (BodySpec / DEXA) — ground truth',
-  blood_panel: 'Blood Panel (Rythm Health CSV) — ground truth',
+  blood_panel: 'Blood Panel (Rythm Health CSV or JSON) — ground truth',
   apple_health_labs: 'Apple Health Labs (PDF or FHIR JSON)',
   withings_scale: 'Withings Body / Scale (CSV)',
   withings_bpm: 'Withings BPM Vision (CSV)',
@@ -208,7 +208,8 @@ const Admin: React.FC = () => {
           });
         }
       } else if (source === 'blood_panel') {
-        const result = parseRythmHealthCsv(rawText);
+        const isJson = rawText.trim().startsWith('{') || rawText.trim().startsWith('[');
+        const result = isJson ? parseRythmHealthJson(rawText) : parseRythmHealthCsv(rawText);
         if (result.errors.length > 0) setErrors(result.errors);
         if (result.data) {
           setPreview({
@@ -281,7 +282,8 @@ const Admin: React.FC = () => {
           toast({ title: 'Body scan imported' });
         }
       } else if (source === 'blood_panel') {
-        const result = parseRythmHealthCsv(rawText);
+        const isJson = rawText.trim().startsWith('{') || rawText.trim().startsWith('[');
+        const result = isJson ? parseRythmHealthJson(rawText) : parseRythmHealthCsv(rawText);
         if (!result.data) throw new Error('Validation failed');
         const saved = await createBloodPanel.mutateAsync(result.data.panelInput);
         try {
@@ -541,7 +543,7 @@ const Admin: React.FC = () => {
                     <h4 className="font-medium text-foreground">Available Sources</h4>
                     <ul className="space-y-1.5">
                       <li className="flex gap-2"><Activity className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Body Scan — BodySpec JSON, lbs or kg</span></li>
-                      <li className="flex gap-2"><Droplets className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Blood Panel — RythmHealth CSV</span></li>
+                      <li className="flex gap-2"><Droplets className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Blood Panel — RythmHealth CSV or JSON</span></li>
                       <li className="flex gap-2"><FileJson className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Exercises / Workouts / Programs — JSON arrays</span></li>
                     </ul>
                   </div>

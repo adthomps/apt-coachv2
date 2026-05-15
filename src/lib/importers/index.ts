@@ -20,7 +20,7 @@ export type { SkulptResult } from './skulpt-chisel';
 export type { LumenResult } from './lumen';
 export type { AppleHealthVitalsResult } from './applehealth-vitals';
 export { parseBodyspecJson } from './bodyspec';
-export { parseRythmHealthCsv } from './rythmhealth';
+export { parseRythmHealthCsv, parseRythmHealthJson } from './rythmhealth';
 export { parseAppleHealthLabsJson, parseAppleHealthLabsPdfText, extractPdfText } from './applehealth-labs';
 export { parseWithingsScaleCsv } from './withings-scale';
 export { parseWithingsBpmCsv } from './withings-bpm';
