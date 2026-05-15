@@ -40,10 +40,6 @@ function computeStreak(completedDates: string[]): number {
   return streak;
 }
 
-function daysAgo(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-}
-
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { data: snapshots = [], isLoading: snapsLoading } = useSnapshots();
@@ -52,18 +48,12 @@ const Dashboard: React.FC = () => {
   const { data: sessions = [] } = useSessions();
   const { data: todayLog } = useDailyLog(todayStr());
 
-  const dexaSnapshots = React.useMemo(
-    () => snapshots.filter(s => !isWithings(s)).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
-    [snapshots],
-  );
-  const withingsSnapshots = React.useMemo(
-    () => snapshots.filter(isWithings).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
-    [snapshots],
-  );
+  const dexaSnapshots = React.useMemo(() => selectDexaSorted(snapshots), [snapshots]);
+  const withingsSnapshots = React.useMemo(() => selectWithingsSorted(snapshots), [snapshots]);
 
   const latestDexa = dexaSnapshots[0] ?? null;
   const latestWithings = withingsSnapshots[0] ?? null;
-  const latestPanel = bloodPanels.slice().sort((a, b) => b.panelDate.localeCompare(a.panelDate))[0] ?? null;
+  const latestPanel = selectLatestPanel(bloodPanels);
 
   const [compare, setCompare] = React.useState<ProgressCompare | null>(null);
   React.useEffect(() => {
