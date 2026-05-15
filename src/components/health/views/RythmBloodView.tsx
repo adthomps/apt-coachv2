@@ -62,21 +62,6 @@ const RythmBloodView: React.FC = () => {
     hint: `${p.markers.filter(m => m.status === 'outOfRange').length} flagged`,
   }));
 
-  // Top 3 changed markers vs previous
-  const topChanges = useMemo(() => {
-    if (!previous) return [];
-    return selected.markers
-      .map(m => {
-        const prev = previous.markers.find(p => p.marker === m.marker);
-        if (!prev) return null;
-        const delta = m.value - prev.value;
-        return { marker: m.marker, current: m.value, prev: prev.value, delta, unit: m.unit, status: m.status };
-      })
-      .filter(Boolean)
-      .sort((a, b) => Math.abs((b!.delta / Math.max(b!.prev, 0.001))) - Math.abs((a!.delta / Math.max(a!.prev, 0.001))))
-      .slice(0, 3) as Array<{ marker: string; current: number; prev: number; delta: number; unit: string; status: string }>;
-  }, [selected, previous]);
-
   const meta = (
     <>
       PANEL: {format(new Date(selected.panelDate), 'MMM d, yyyy').toUpperCase()} · RYTHM HEALTH
