@@ -195,6 +195,83 @@ const Today: React.FC = () => {
 
   const loggedCount = countLoggedInputs(log?.vitals, log?.bodyWeight);
 
+  // Month direction tiles
+  const monthTiles = useMemo<DirectionTile[]>(() => {
+    const tiles: DirectionTile[] = [];
+    if (compare) {
+      const fmPct = compare.changes.fatMass.percentage;
+      tiles.push({
+        id: 'fat', label: 'Fat trend',
+        value: `${fmPct >= 0 ? '+' : ''}${fmPct.toFixed(1)}%`,
+        sub: fmPct > 0 ? 'up' : fmPct < 0 ? 'down' : 'flat',
+        trend: fmPct > 0 ? 'up' : fmPct < 0 ? 'down' : 'flat',
+        status: fmPct > 0.5 ? 'act' : fmPct < 0 ? 'good' : 'watch',
+      });
+      const lm = compare.changes.leanMass.value;
+      tiles.push({
+        id: 'lean', label: 'Lean',
+        value: `${lm >= 0 ? '+' : ''}${lm.toFixed(1)} lbs`,
+        sub: lm >= 0 ? 'good' : 'watch',
+        status: lm >= 0 ? 'good' : 'watch',
+      });
+    }
+    const latestPanel = bloodPanels.slice().sort((a, b) => b.panelDate.localeCompare(a.panelDate))[0];
+    if (latestPanel) {
+      const oor = latestPanel.markers.filter(m => m.status === 'outOfRange').length;
+      tiles.push({
+        id: 'oor', label: 'OOR', value: String(oor),
+        sub: 'blood panel',
+        status: oor >= 3 ? 'act' : oor > 0 ? 'watch' : 'good',
+      });
+    }
+    const completed = scheduleEntries.filter(e => e.status === 'completed').length;
+    const planned = scheduleEntries.length || 0;
+    tiles.push({
+      id: 'sessions', label: 'Sessions',
+      value: `${completed}/${planned || '—'}`,
+      sub: planned ? `${Math.round((completed / planned) * 100)}%` : 'no plan',
+      status: planned && completed / planned >= 0.7 ? 'good' : 'watch',
+    });
+    return tiles;
+  }, [compare, bloodPanels, scheduleEntries]);
+
+  // Day goals
+  const dayGoals = useMemo<DayGoal[]>(() => {
+    const proteinRem = Math.max(targets.protein - consumed.protein, 0);
+    const stepGoal = 8000;
+    const steps = log?.vitals?.stepsCount ?? 0;
+    const waterGoal = 2.5; // L
+    const waterOz = log?.vitals?.waterIntakeOz ?? 0;
+    const waterL = waterOz * 0.0295735;
+    const sessionTime = todaySession ? 'completed' : todayEntry ? 'scheduled' : 'no session';
+    return [
+      {
+        id: 'protein', label: 'Protein target',
+        target: `${targets.protein}g`,
+        status: `${consumed.protein}g logged · ${Math.round(proteinRem)}g remaining`,
+        tone: proteinRem === 0 ? 'good' : 'pending',
+      },
+      {
+        id: 'steps', label: 'Step target',
+        target: stepGoal.toLocaleString(),
+        status: `${steps.toLocaleString()} so far`,
+        tone: steps >= stepGoal ? 'good' : 'pending',
+      },
+      {
+        id: 'water', label: 'Water target',
+        target: `${waterGoal.toFixed(1)} L`,
+        status: waterOz > 0 ? `${waterL.toFixed(1)} L logged` : 'not yet logged',
+        tone: waterL >= waterGoal ? 'good' : 'pending',
+      },
+      {
+        id: 'session', label: 'Session',
+        target: todaySession?.workoutName ?? todayEntry?.notes ?? '—',
+        status: sessionTime,
+        tone: 'info',
+      },
+    ];
+  }, [targets, consumed, log, todaySession, todayEntry]);
+
   const refreshAI = () => {
     setRefreshing(true);
     setTimeout(() => {
