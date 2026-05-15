@@ -38,9 +38,9 @@ const HealthSourceTabs: React.FC<Props> = ({ active, onChange, withingsSegment =
             type="button"
             onClick={() => onChange(id)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors',
+              'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               isActive
-                ? 'bg-primary text-primary-foreground border-primary'
+                ? 'bg-accent/15 text-accent border-accent/40'
                 : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground',
             )}
           >
