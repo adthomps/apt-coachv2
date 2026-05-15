@@ -15,7 +15,7 @@ import type {
   ExercisePerformanceProfile,
   AdaptiveRecommendation,
   BloodPanel,
-  DailyLog, DailyVitals, MealEntry, MealSlot,
+  DailyLog, DailyVitals, MealEntry, MealSlot, DayGoals,
   NutritionGoal,
 } from './types';
 import {
@@ -417,6 +417,13 @@ export const dailyLogApi = {
     await delay(100);
     const log = dailyLogs.get(date) ?? emptyLog(date);
     log.vitals = { ...(log.vitals ?? {}), ...vitals };
+    dailyLogs.set(date, log);
+    return log;
+  },
+  async updateGoals(date: string, goals: DayGoals): Promise<DailyLog> {
+    await delay(100);
+    const log = dailyLogs.get(date) ?? emptyLog(date);
+    log.goals = { ...(log.goals ?? {}), ...goals };
     dailyLogs.set(date, log);
     return log;
   },

@@ -48,9 +48,7 @@ const FIELDS: FieldDef[] = [
     format: v => v.toLocaleString() },
   { id: 'bodyTempF', kind: 'number', vitalKey: 'bodyTempF', label: 'Temperature', short: 'Temp', source: 'Withings BeamO', icon: <Thermometer className="h-3.5 w-3.5" />, unit: '°F', step: '0.1',
     format: v => `${v.toFixed(1)}°F` },
-  { id: 'lumenMorningLevel', kind: 'select', vitalKey: 'lumenMorningLevel', label: 'Lumen score', short: 'Lumen', source: 'Lumen', icon: <Flame className="h-3.5 w-3.5" />,
-    selectOptions: [1,2,3,4,5].map(n => ({ value: String(n), label: `${n} ${n===1?'(fat)':n===5?'(carb)':''}` })),
-    format: v => `Lvl ${v}` },
+  // Lumen handled separately as a multi-event summary chip (see LumenSummaryChip).
   { id: 'sleepScore', kind: 'number', vitalKey: 'sleepScore', label: 'Sleep score', short: 'Sleep', source: 'Apple Health', icon: <Moon className="h-3.5 w-3.5" />, unit: '/100',
     format: v => `${v}/100` },
   { id: 'waterIntakeOz', kind: 'number', vitalKey: 'waterIntakeOz', label: 'Water intake', short: 'Water', source: 'Apple Health', icon: <Droplets className="h-3.5 w-3.5" />, unit: 'oz', step: '0.1',
@@ -242,10 +240,44 @@ const HeadlineTile: React.FC<{
   );
 };
 
+const LumenSummaryChip: React.FC<{
+  vitals?: DailyVitals;
+  onOpen: () => void;
+}> = ({ vitals, onOpen }) => {
+  const readings = vitals?.lumenReadings ?? [];
+  const logged = readings.filter(r => r.level != null).length;
+  const peak = vitals?.lumenPeakLevel;
+  const wakeUp = vitals?.lumenMorningLevel;
+  const display = logged === 0
+    ? 'pending'
+    : `${logged} logged${wakeUp != null ? ` · AM ${wakeUp}` : ''}${peak != null ? ` · peak ${peak}` : ''}`;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+        logged > 0
+          ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/15'
+          : 'border-warning/40 bg-warning/10 text-warning hover:bg-warning/15',
+      )}
+    >
+      {logged > 0 ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+      <Flame className="h-3 w-3" />
+      <span>Lumen</span>
+      <span className="text-muted-foreground">·</span>
+      <span className="tabular-nums">{display}</span>
+    </button>
+  );
+};
+
 const DailyInputsCard: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
   const [editAllOpen, setEditAllOpen] = useState(false);
+  const [editTab, setEditTab] = useState<'apple' | 'withings' | 'lumen'>('apple');
   const headline = FIELDS.filter(f => f.headline);
   const chips = FIELDS;
+
+  const openLumen = () => { setEditTab('lumen'); setEditAllOpen(true); };
 
   return (
     <>
@@ -256,7 +288,7 @@ const DailyInputsCard: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
           </span>
         }
         actions={
-          <Button variant="outline" size="sm" onClick={() => setEditAllOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => { setEditTab('apple'); setEditAllOpen(true); }}>
             <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Edit all
           </Button>
         }
@@ -266,6 +298,7 @@ const DailyInputsCard: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
             {chips.map(f => (
               <StatusChip key={f.id} field={f} date={date} vitals={vitals} bodyWeight={bodyWeight} />
             ))}
+            <LumenSummaryChip vitals={vitals} onOpen={openLumen} />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/40">
             {headline.map(f => (
@@ -285,18 +318,20 @@ const DailyInputsCard: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
         cancelLabel="Close"
         onSubmit={() => setEditAllOpen(false)}
       >
-        <DailySignalsTabs date={date} vitals={vitals} bodyWeight={bodyWeight} />
+        <DailySignalsTabs date={date} vitals={vitals} bodyWeight={bodyWeight} defaultTab={editTab} />
       </FormDialog>
     </>
   );
 };
 
-export const DAILY_INPUT_TOTAL = FIELDS.length;
+export const DAILY_INPUT_TOTAL = FIELDS.length + 1; // + Lumen summary
 export function countLoggedInputs(vitals?: DailyVitals, bodyWeight?: number) {
-  return FIELDS.filter(f => {
+  const fieldCount = FIELDS.filter(f => {
     const v = valueOf(f, vitals, bodyWeight);
     return v != null && v !== '';
   }).length;
+  const lumenLogged = (vitals?.lumenReadings ?? []).some(r => r.level != null) ? 1 : 0;
+  return fieldCount + lumenLogged;
 }
 
 export default DailyInputsCard;
