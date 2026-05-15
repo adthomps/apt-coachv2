@@ -126,6 +126,7 @@ export function getBodyScanInsights(
         date: snapshot.scanDate,
       },
       metricKey: fsKey,
+      sourceTab: 'dexa',
     });
   }
 
