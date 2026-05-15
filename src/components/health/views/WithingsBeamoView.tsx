@@ -54,6 +54,7 @@ const WithingsBeamoView: React.FC = () => {
     <SourcePageShell
       metaLine={<>WITHINGS BEAMO · {filtered.length} READINGS · WINDOW {windowDays ?? '30'}D</>}
       compare={{ value: windowDays, onChange: setWindowDays, presets: PRESETS, autoLabel: 'Last 30 days', triggerLabel: 'Trend window' }}
+    usedIn={[{ label: 'Today · vitals', href: '/today' }, { label: 'Dashboard · recovery signal', href: '/dashboard' }]}
     >
       {overlay.length > 0 && <CompanionOverlayStrip chips={overlay} />}
 

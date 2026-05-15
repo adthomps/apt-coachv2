@@ -60,6 +60,7 @@ const AppleHealthView: React.FC = () => {
         value: windowDays, onChange: setWindowDays,
         autoLabel: 'Last 30 days', presets: WINDOW_PRESETS, triggerLabel: 'Trend window',
       }}
+      usedIn={[{ label: 'Today · vitals', href: '/today' }, { label: 'Dashboard · Apple Health', href: '/dashboard' }]}
     >
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiHeroTile label="Resting HR" value={restingHR ? `${restingHR.toFixed(0)} bpm` : '—'} />

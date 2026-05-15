@@ -75,6 +75,7 @@ const RythmBloodView: React.FC = () => {
       compare={{ value: compareId, onChange: setCompareId, autoLabel: 'Previous panel (auto)', items: compareItems }}
       insightsCount={insights.length}
       onInsightsClick={() => document.getElementById('insights')?.scrollIntoView({ behavior: 'smooth' })}
+    usedIn={[{ label: 'Today · food guidance', href: '/today' }, { label: 'Dashboard · Rythm card', href: '/dashboard' }]}
     >
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiHeroTile label="Total markers" value={total} />

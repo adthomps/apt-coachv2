@@ -120,6 +120,7 @@ const WithingsScaleView: React.FC = () => {
         compare={{ value: compareId, onChange: setCompareId, autoLabel: 'Previous reading (auto)', items: compareItems }}
         insightsCount={insights.length}
         onInsightsClick={() => document.getElementById('insights')?.scrollIntoView({ behavior: 'smooth' })}
+      usedIn={[{ label: 'Today · daily weight', href: '/today' }, { label: 'Dashboard · Withings card', href: '/dashboard' }]}
       >
         {overlayChips.length > 0 && <CompanionOverlayStrip chips={overlayChips} />}
 

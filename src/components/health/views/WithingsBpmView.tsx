@@ -62,6 +62,7 @@ const WithingsBpmView: React.FC = () => {
     <SourcePageShell
       metaLine={meta}
       compare={{ value: windowDays, onChange: setWindowDays, presets: PRESETS, autoLabel: 'Last 30 days', triggerLabel: 'Trend window' }}
+      usedIn={[{ label: 'Today · vitals', href: '/today' }, { label: 'Dashboard · Withings card', href: '/dashboard' }]}
     >
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiHeroTile label="Systolic avg" value={sysAvg ? `${sysAvg.toFixed(0)}` : '—'} valueTone={cls.tone === 'success' ? 'success' : cls.tone === 'warning' ? 'warning' : 'destructive'} />

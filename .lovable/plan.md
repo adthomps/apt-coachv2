@@ -1,98 +1,87 @@
-# Health Data — Source-Tabbed Redesign
+# APT Conformance Pass + Today/Dashboard ↔ Health Linkage
 
-Restructure `/health` to match the mock: a **single source-selector tab strip** at the top, a **scan/reading meta line** with comparison + AI insight buttons, a **4-up KPI hero strip** with delta + Fav/Unfav chips, a **two-column detail panel** (composition detail + regional/marker breakdown), and a **bone-density / supplemental tile row**. Each source view can layer in **overlays** from related sources for context.
+Two coordinated workstreams: (1) audit every UI surface against APT color & interaction rules, (2) make insights/data bidirectionally navigable between Today, Dashboard, and the new per-source Health views.
 
-## Source tabs
+## 1. APT Color & Interaction Audit
 
-A single horizontal pill bar (chip-style like the mock) replaces the current 3-tab `Tabs` strip. Tabs:
+APT rules (from `apt-principles/design.md` + `references/design-tokens.json`):
+- **Blue (220)** = brand, primary CTAs, links, focus rings, active nav.
+- **Accent/teal (165)** = section identity, selection, success, badges, chart accents — never the default CTA.
+- **Semantic feedback** (success / warning / destructive) only for state, never decoration.
+- **Disabled** = reduced contrast, never hidden.
+- **Calm motion only**; subtle fade / hover lift; 140–220ms.
+- **No raw colors**; semantic tokens only.
 
-```text
-[ ⚡ DEXA ]  [ 🧪 Rythm Health ]  [ ❤ Apple / MyChart ]  [ ⚖ Withings ]  [ ✏ Skulpt Chisel ]  [ 💨 Lumen ]
-```
+### Findings to fix
 
-Withings expands into a sub-segment row beneath the tabs:
+| File | Issue | Fix |
+|---|---|---|
+| `pages/NotFound.tsx` | `text-blue-500/700` raw color | `text-primary hover:text-primary-hover` |
+| `components/sessions/HeartRateZoneBar.tsx` | `bg-sky-500/70`, `bg-orange-500/70` raw | Map zones to semantic tokens (`primary`, `accent`, `warning`, `destructive`) |
+| `components/ui/toast.tsx` | shadcn default `red-300/50/400/600` inside destructive variant | Replace with `destructive`/`destructive-foreground` aliases |
+| Dashboard / Health value-compare chips | Already use `success`/`destructive`/`warning`/`muted` — keep, but unify the `fav/unfav/neutral` vs `delta` chip styles into one shared `<ToneChip>` so every page renders compares identically |
+| Selected/active states across `HealthSourceTabs`, dashboard cards, chips | Today some use `primary`, some `accent`. Per APT: **selection/section identity = accent (teal)**, **primary CTA = blue**. Standardize: tabs/segmented active state → accent; buttons/links → primary |
+| Focus rings | Confirm `focus-visible:ring-ring` everywhere; add to custom buttons in `KpiHeroTile`, `SourcePageShell` jump-to-insights |
+| Motion | Audit any `duration-500/700` on hover; cap at `duration-200` per APT 140–220ms |
 
-```text
-Scale / Body Scan   ·   BPM Vision   ·   BeamO
-```
+### New shared primitive
 
-## Per-source layout (shared shell)
+`src/components/apt/ToneChip.tsx` — single source of truth for value-compare chips:
+- `tone: 'fav' | 'unfav' | 'neutral' | 'warning'` (semantic, not color names)
+- consistent radius, padding, arrow icon, aria-label for screen readers
+- replaces ad-hoc chip styles in `KpiHeroTile`, `SourceSummaryCard`, `SignalChipStrip`, `DeltaValue`
 
-```text
-─────────────────────────────────────────────────────────
-SCAN/READING: <date> · <provider> · COMPARING vs <date> (<n> DAYS)
-[ Comparison window ▾ ]   [ ✦ AI insights ]
-─────────────────────────────────────────────────────────
-┌ KPI 1 ┐ ┌ KPI 2 ┐ ┌ KPI 3 ┐ ┌ KPI 4 ┐    ← delta arrow + Fav/Unfav chip
-└───────┘ └───────┘ └───────┘ └───────┘
-┌────────────── DETAIL PANEL (2-col) ──────────────────┐
-│ Left: composition / marker detail                     │
-│ Right: regional / supporting metrics + overlay chips  │
-└───────────────────────────────────────────────────────┘
-┌ Tile 1 ┐ ┌ Tile 2 ┐ ┌ Tile 3 ┐ ┌ Tile 4 ┐   ← bone density / vitals / lumen flex
-└────────┘ └────────┘ └────────┘ └────────┘
-[ ⓘ What these scores mean ]
-```
+### Active-state convention (documented in `index.css` comment block)
 
-## Source-by-source content
+- Pill/tab active background: `bg-accent/15 text-accent border-accent/30`
+- Primary CTA: `bg-primary text-primary-foreground hover:bg-primary-hover`
+- Link: `text-primary underline-offset-4 hover:underline`
 
-**DEXA (BodySpec)** — keeps current data. KPIs: Weight, Body Fat %, Lean, Fat. Detail: lean ratio, BF vs healthy range, visceral fat, fat:lean ratio, android:gynoid, bone mass. Right column: regional breakdown (android/arms/gynoid/legs/trunk) with delta + Fav/Unfav. Bottom row: T-score, Z-score, Lumbar BMD, Femur BMD. **Overlay:** chips above KPIs showing nearest-date Withings weight/BF and Skulpt MQ as "context reading vs scan" deltas.
+## 2. Today ↔ Dashboard ↔ Health Linkage
 
-**Rythm Health (Blood Panel)** — KPIs: # markers, # flagged, # optimal, panel score. Detail (left): grouped marker table by category (lipids / metabolic / hormones / inflammation) reusing `BloodPanelDetail`. Right: trend mini-cards for top-3 changed markers vs prior panel. Bottom row: top flagged marker explainers. No overlays.
+Currently Health source views consume `useSnapshots`, `useBloodPanels`, `useHealthCheckins`, but Today and Dashboard don't deep-link into them, and the source views don't surface today's checkin context.
 
-**Apple / MyChart** — KPIs: Resting HR, HRV, VO₂max, Sleep avg. Detail: 7/30/90-day trend chart for the selected metric (uses `applehealth-vitals` checkins). Right: workout summary + step/active energy averages. Bottom row: hand-grip, walking steadiness, audio exposure. No overlays (it's already the aggregator).
+### A. From Dashboard / Today → Health (deep links)
 
-**Withings — Scale / Body Scan** — KPIs: Weight, Body Fat %, Muscle Mass, Water %. Detail left: weight trend over comparison window, segmental composition. Right: "Variance vs DEXA" overlay (ground-truth delta) + "Variance vs Skulpt MQ regions". Bottom: bone mass, visceral fat, BMI, pulse-wave velocity.
+- `SourceSummaryCard` (Dashboard) — wrap each card title + "View details" affordance with `<Link to="/health?source={dexa|rythm|withings-scale|...}">`.
+- Dashboard `Insight` items (body scan + blood panel) → each insight gets a "See in Health" link to the relevant source view.
+- Today's protocol recommendation card → "Why this?" link to `/health?source=rythm` (or whichever source drove the recommendation).
+- Today's body-comp summary chip → links to `/health?source=dexa`.
 
-**Withings — BPM Vision** — KPIs: Systolic, Diastolic, Pulse, MAP. Detail: BP trend, AM/PM split, classification banner (normal/elevated/stage1/stage2). Right: medication-window notes from notes field. Bottom: weekly avg, # readings, time-in-target %.
+### B. Health page accepts `?source=` query param
 
-**Withings — BeamO** — KPIs: Temp, SpO₂, ECG rhythm, Stethoscope notes. Detail: per-modality recent readings list. Right: rhythm log timeline. Bottom: overlay Apple Health vitals for the same date (HR, HRV).
+- `Health.tsx` reads `useSearchParams` → seeds `HealthSourceTabs` initial selection.
+- Subsequent tab changes update the URL (`replace: true`) so links are shareable and back/forward works.
 
-**Skulpt Chisel** — KPIs: Overall MQ, Body Fat %, Best region MQ, Weakest region MQ. Detail left: regional MQ + BF table with sparkline vs prior reading. Right: **overlay** Withings BF % and DEXA regional lean for nearest dates as a side-by-side compare. Bottom: per-muscle-group strength-direction notes.
+### C. From Health → Today/Dashboard (back-references)
 
-**Lumen** — KPIs: Morning level, Daily peak, Metabolic flex score, Streak days. Detail left: per-day morning→peak swing chart over comparison window with pre/post-meal markers (breakfast/lunch/dinner — leverages the recently added Lumen events model). Right: macro guidance derived from level (carb-fat balance hints). Bottom: weekly flex avg, fasted-AM %, post-workout drop %.
+Each source view's `SourcePageShell` gets a small "Used in" footer strip:
+- DEXA / Skulpt / Withings Scale → "Drives today's training emphasis" → `/today`
+- Rythm Blood → "Informs today's food guidance" → `/today`
+- Apple / Withings BeamO → "Feeds dashboard recovery signal" → `/dashboard`
 
-## Comparison window
+### D. Shared selectors so numbers match exactly
 
-Replace the bare `Compare against ▾` selector with a **dropdown popover** (button labelled `Comparison window ▾`) offering:
-- Previous reading (auto)
-- Pick a date (existing list)
-- Last 7 / 30 / 90 days rolling avg
+Create `src/lib/selectors/health.ts`:
+- `selectLatestSnapshot(snapshots)` — single canonical "latest DEXA"
+- `selectComparePair(snapshots, mode)` — returns `{ current, baseline }` used by both Dashboard `SourceSummaryCard` and Health `DexaView` so deltas are always identical.
+- `selectLatestPanel(panels)`, `selectPanelComparePair(panels, mode)`.
+- `selectTodayCheckin(checkins)` — used by Today and by `CompanionOverlayStrip` so the "today's weight" overlay on DEXA matches the number on Today.
 
-Same component reused across every source. For sources without paired readings (Apple Health), the dropdown switches to "Trend window" with 7/30/90/180 day options.
+Refactor `Dashboard.tsx`, `Today.tsx`, and the source views to consume these selectors instead of inline `.sort()[0]` patterns. This is the structural fix that guarantees the same number shows in all three places.
 
-## Overlay model
+### E. Insight provenance
 
-Each source declares optional `companionSources: HealthSourceId[]`. The shell renders an **Overlay strip** above the KPI hero with one chip per companion, e.g. `Withings · 205.4 lbs (Feb 26) · −0.8 lbs vs scan`. Click → opens that source's tab pre-filtered to the matched date.
+Add an optional `source: HealthSourceId` field on the existing `Insight` type produced by `getBodyScanInsights` / `getBloodPanelInsights`. Dashboard/Today render the source as a small `<SourceBadge>` next to each insight, and the badge is the deep link.
 
-## Components to add / change
+## Out of Scope
 
-**New**
-- `src/components/health/HealthSourceTabs.tsx` — pill-style top tabs + Withings sub-segments.
-- `src/components/health/SourcePageShell.tsx` — meta row, comparison popover, AI insights button, KPI strip slot, detail-panel slot, tile-row slot.
-- `src/components/health/KpiHeroTile.tsx` — large KPI variant with `Fav` / `Unfav` chip (matches mock).
-- `src/components/health/CompositionDetailPanel.tsx` — left/right two-col detail with metric explainer rows and the regional list on the right.
-- `src/components/health/ComparisonWindowPopover.tsx` — replaces inline compare select.
-- `src/components/health/CompanionOverlayStrip.tsx` — chip row pulling from sibling sources by nearest date.
-- `src/components/health/views/` — one view per source: `DexaView.tsx`, `RythmBloodView.tsx`, `AppleHealthView.tsx`, `WithingsScaleView.tsx`, `WithingsBpmView.tsx`, `WithingsBeamoView.tsx`, `SkulptView.tsx`, `LumenView.tsx`.
+- No new data sources or API changes.
+- No edits to importer schemas.
+- No mobile redesign; responsive parity only.
+- No light-mode work beyond ensuring tokens already defined still render.
 
-**Updated**
-- `src/pages/Health.tsx` — becomes a thin router: tab state → renders one of the source views inside `SourcePageShell`. Keep existing data hooks (`useSnapshots`, `useBloodPanels`, `useHealthCheckins`).
-- `src/components/health/KpiStat.tsx` — extend with optional `favTone: 'fav' | 'unfav'` chip used by the hero variant.
+## Files Touched (estimate)
 
-**Removed**
-- The current `Tabs`/`TabsList` markup in `Health.tsx` (folded into `HealthSourceTabs`).
-
-## Data sources reused (no API changes)
-
-- `useSnapshots()` → DEXA + Withings Scale (filtered by provider).
-- `useBloodPanels()` → Rythm Health.
-- `useHealthCheckins({ source })` → Withings BPM, BeamO, Apple Health, Lumen, Skulpt Chisel (already populated by existing importers).
-- `getBodyScanInsights` / `getBloodPanelInsights` reused; add thin `getVitalsInsights` later if needed (not in this pass).
-
-## Out of scope (this pass)
-
-- New importer schemas — all existing.
-- Editing scan/panel records — still via Admin.
-- Charts library swap — uses existing recharts wrappers.
-- Mobile-specific redesign — desktop-first, responsive collapse only.
+New: `src/components/apt/ToneChip.tsx`, `src/lib/selectors/health.ts`.
+Edited: `pages/NotFound.tsx`, `pages/Today.tsx`, `pages/Dashboard.tsx`, `pages/Health.tsx`, `components/sessions/HeartRateZoneBar.tsx`, `components/ui/toast.tsx`, all `components/health/views/*`, `components/health/KpiHeroTile.tsx`, `components/health/HealthSourceTabs.tsx`, `components/health/SourcePageShell.tsx`, `components/dashboard/SourceSummaryCard.tsx`, `components/dashboard/SignalChipStrip.tsx`, `lib/ai/insights.ts` (add source field), `index.css` (active-state convention comment).

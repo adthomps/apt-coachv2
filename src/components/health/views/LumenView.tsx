@@ -48,6 +48,7 @@ const LumenView: React.FC = () => {
     <SourcePageShell
       metaLine={<>LUMEN · {filtered.length} DAYS · WINDOW {windowDays ?? '14'}D</>}
       compare={{ value: windowDays, onChange: setWindowDays, presets: PRESETS, autoLabel: 'Last 14 days', triggerLabel: 'Trend window' }}
+    usedIn={[{ label: 'Today · food guidance', href: '/today' }]}
     >
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiHeroTile label="Morning level avg" value={morningAvg ? morningAvg.toFixed(1) : '—'}

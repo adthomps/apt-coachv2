@@ -21,6 +21,9 @@ import { resolveMarkerKey, type MetricKey } from '@/lib/health/metric-glossary';
 export type InsightCategory = 'food' | 'training' | 'schedule' | 'lifestyle';
 export type InsightSeverity = 'info' | 'attention' | 'urgent';
 
+/** Source of an insight — drives the deep-link badge in dashboard/today views. */
+export type InsightSource = 'dexa' | 'rythm' | 'withings' | 'apple' | 'skulpt' | 'lumen';
+
 export interface InsightEvidence {
   source: 'body_scan' | 'blood_panel' | 'session' | 'schedule';
   label: string;
@@ -41,6 +44,8 @@ export interface Insight {
   metricKey?: MetricKey;
   /** Or pass an inline science block when no glossary key fits. */
   science?: { what: string; why: string; focus: string[] };
+  /** Source page this insight originates from — drives the "See in Health" link. */
+  sourceTab?: InsightSource;
 }
 
 let counter = 0;
@@ -99,6 +104,7 @@ export function getBodyScanInsights(
           date: snapshot.scanDate,
         },
     metricKey: compare ? 'lean_mass' : 'body_fat',
+    sourceTab: 'dexa',
   });
 
   // Food suggestions — each tied to the snapshot.
@@ -120,6 +126,7 @@ export function getBodyScanInsights(
         date: snapshot.scanDate,
       },
       metricKey: fsKey,
+      sourceTab: 'dexa',
     });
   }
 
@@ -153,6 +160,7 @@ export function getBloodPanelInsights(panel: BloodPanel): Insight[] {
           date: marker.time,
         },
         metricKey: resolveMarkerKey(marker.marker) ?? undefined,
+        sourceTab: 'rythm',
       };
     })
     .filter((i): i is Insight => i !== null);

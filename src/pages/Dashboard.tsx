@@ -20,9 +20,11 @@ import {
 import { snapshotApi } from '@/lib/api';
 import { getBodyScanInsights, getBloodPanelInsights, type Insight } from '@/lib/ai/insights';
 import { computeSessionSnapshot } from '@/lib/ai/session-insights';
-import type { ProgressCompare, Snapshot } from '@/lib/api/types';
+import type { ProgressCompare } from '@/lib/api/types';
+import {
+  selectDexaSorted, selectWithingsSorted, selectLatestPanel, daysAgo,
+} from '@/lib/selectors/health';
 
-const isWithings = (s: Snapshot) => (s.provider || '').toLowerCase() === 'withings';
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 function computeStreak(completedDates: string[]): number {
@@ -38,10 +40,6 @@ function computeStreak(completedDates: string[]): number {
   return streak;
 }
 
-function daysAgo(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-}
-
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { data: snapshots = [], isLoading: snapsLoading } = useSnapshots();
@@ -50,18 +48,12 @@ const Dashboard: React.FC = () => {
   const { data: sessions = [] } = useSessions();
   const { data: todayLog } = useDailyLog(todayStr());
 
-  const dexaSnapshots = React.useMemo(
-    () => snapshots.filter(s => !isWithings(s)).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
-    [snapshots],
-  );
-  const withingsSnapshots = React.useMemo(
-    () => snapshots.filter(isWithings).sort((a, b) => b.scanDate.localeCompare(a.scanDate)),
-    [snapshots],
-  );
+  const dexaSnapshots = React.useMemo(() => selectDexaSorted(snapshots), [snapshots]);
+  const withingsSnapshots = React.useMemo(() => selectWithingsSorted(snapshots), [snapshots]);
 
   const latestDexa = dexaSnapshots[0] ?? null;
   const latestWithings = withingsSnapshots[0] ?? null;
-  const latestPanel = bloodPanels.slice().sort((a, b) => b.panelDate.localeCompare(a.panelDate))[0] ?? null;
+  const latestPanel = selectLatestPanel(bloodPanels);
 
   const [compare, setCompare] = React.useState<ProgressCompare | null>(null);
   React.useEffect(() => {
@@ -327,7 +319,7 @@ const Dashboard: React.FC = () => {
             priorityMetricKey={bodyInsights[0]?.metricKey}
             food={dexaTopFood?.title ?? null}
             meta={latestDexa ? format(new Date(latestDexa.scanDate), 'MMM d, yyyy') : null}
-            href="/health"
+            href="/health?source=dexa"
           />
           <SourceSummaryCard
             title="Rythm Health"
@@ -341,7 +333,7 @@ const Dashboard: React.FC = () => {
             priorityMetricKey={rythmTopMarker?.metricKey}
             food={panelInsights.find(i => i.category === 'food')?.actions?.[0] ?? null}
             meta={latestPanel ? format(new Date(latestPanel.panelDate), 'MMM d, yyyy') : null}
-            href="/health"
+            href="/health?source=rythm"
           />
           <SourceSummaryCard
             title="Withings"
@@ -355,7 +347,7 @@ const Dashboard: React.FC = () => {
               ? `Data stale — ${withingsStale} days ago. Refresh sync.`
               : 'Use as a daily trend check between DEXA scans.'}
             meta={latestWithings ? `${format(new Date(latestWithings.scanDate), 'MMM d, yyyy')}${withingsStale != null && withingsStale > 7 ? ' · stale' : ''}` : null}
-            href="/health"
+            href="/health?source=withings"
           />
         </div>
 
