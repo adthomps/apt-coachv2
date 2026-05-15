@@ -292,7 +292,6 @@ const Today: React.FC = () => {
           aiRefreshedAt={aiRefreshedAt}
           onChangeDate={setDate}
           onRefreshAI={refreshAI}
-          onBackfill={() => navigate('/schedule')}
           refreshing={refreshing}
         />
 
