@@ -104,6 +104,7 @@ export function getBodyScanInsights(
           date: snapshot.scanDate,
         },
     metricKey: compare ? 'lean_mass' : 'body_fat',
+    sourceTab: 'dexa',
   });
 
   // Food suggestions — each tied to the snapshot.
