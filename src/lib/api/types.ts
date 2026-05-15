@@ -508,10 +508,12 @@ export interface DailyVitals {
   waterIntakeOz?: number;
   /** Apple Health: ECG rhythm reading. */
   ecgRhythm?: 'normal' | 'afib' | 'inconclusive';
-  /** Lumen: morning fasted reading (1=fat burn → 5=carb burn). */
+  /** Lumen: morning fasted reading (1=fat burn → 5=carb burn). Derived from lumenReadings.wake_up. */
   lumenMorningLevel?: 1 | 2 | 3 | 4 | 5;
-  /** Lumen: peak / latest reading of the day. */
+  /** Lumen: peak / latest reading of the day. Derived from max of lumenReadings. */
   lumenPeakLevel?: 1 | 2 | 3 | 4 | 5;
+  /** Lumen: per-event readings throughout the day. */
+  lumenReadings?: LumenReading[];
   /** Withings Scale: daily body fat % (context overlay; DEXA remains truth). */
   withingsBodyFatPct?: number;
   /** Withings Scale: daily weight (lbs) — mirrors DailyLog.bodyWeight when sourced from Withings. */
