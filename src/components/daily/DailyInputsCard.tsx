@@ -118,7 +118,8 @@ const ChipEditor: React.FC<ChipEditorProps> = ({ field, date, vitals, bodyWeight
         update.mutate({ date, vitals: { systolicMmHg: s, diastolicMmHg: d } as DailyVitals });
       }
     } else if (field.kind === 'select' && field.vitalKey) {
-      const v = sel === '' ? undefined : Number(sel);
+      const isNumeric = field.selectOptions?.every(o => /^\d+$/.test(o.value)) ?? true;
+      const v = sel === '' ? undefined : (isNumeric ? Number(sel) : sel);
       update.mutate({ date, vitals: { [field.vitalKey]: v } as DailyVitals });
     } else if (field.kind === 'number' && field.vitalKey) {
       const v = num === '' ? undefined : Number(num);
