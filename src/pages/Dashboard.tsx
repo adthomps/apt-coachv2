@@ -20,9 +20,11 @@ import {
 import { snapshotApi } from '@/lib/api';
 import { getBodyScanInsights, getBloodPanelInsights, type Insight } from '@/lib/ai/insights';
 import { computeSessionSnapshot } from '@/lib/ai/session-insights';
-import type { ProgressCompare, Snapshot } from '@/lib/api/types';
+import type { ProgressCompare } from '@/lib/api/types';
+import {
+  selectDexaSorted, selectWithingsSorted, selectLatestPanel, daysAgo,
+} from '@/lib/selectors/health';
 
-const isWithings = (s: Snapshot) => (s.provider || '').toLowerCase() === 'withings';
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 function computeStreak(completedDates: string[]): number {
