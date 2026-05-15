@@ -240,17 +240,19 @@ const Today: React.FC = () => {
 
   // Day goals
   const dayGoals = useMemo<DayGoal[]>(() => {
-    const proteinRem = Math.max(targets.protein - consumed.protein, 0);
-    const stepGoal = 8000;
+    const proteinTarget = log?.goals?.proteinG ?? targets.protein;
+    const proteinRem = Math.max(proteinTarget - consumed.protein, 0);
+    const stepGoal = log?.goals?.steps ?? 8000;
     const steps = log?.vitals?.stepsCount ?? 0;
-    const waterGoal = 2.5; // L
+    const waterGoal = log?.goals?.waterL ?? 2.5; // L
     const waterOz = log?.vitals?.waterIntakeOz ?? 0;
     const waterL = waterOz * 0.0295735;
     const sessionTime = todaySession ? 'completed' : todayEntry ? 'scheduled' : 'no session';
+    const sessionLabel = log?.goals?.sessionNote ?? todaySession?.workoutName ?? todayEntry?.notes ?? '—';
     return [
       {
         id: 'protein', label: 'Protein target',
-        target: `${targets.protein}g`,
+        target: `${proteinTarget}g`,
         status: `${consumed.protein}g logged · ${Math.round(proteinRem)}g remaining`,
         tone: proteinRem === 0 ? 'good' : 'pending',
       },
@@ -268,7 +270,7 @@ const Today: React.FC = () => {
       },
       {
         id: 'session', label: 'Session',
-        target: todaySession?.workoutName ?? todayEntry?.notes ?? '—',
+        target: sessionLabel,
         status: sessionTime,
         tone: 'info',
       },
@@ -320,7 +322,7 @@ const Today: React.FC = () => {
               </div>
             </SectionCard>
 
-            <DayGoalsCard goals={dayGoals} onEdit={() => navigate('/settings')} />
+            <DayGoalsCard goals={dayGoals} onEdit={() => setDayGoalsOpen(true)} />
 
             <SectionCard
               title={
