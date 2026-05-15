@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SourceBadge from '@/components/health/SourceBadge';
+import LumenEventsEditor from './LumenEventsEditor';
 import { useUpdateDailyVitals, useLogWeight } from '@/hooks/use-api-queries';
 import type { DailyVitals, HealthSourceId } from '@/lib/api/types';
 
@@ -62,24 +63,12 @@ const WITHINGS_FIELDS: Field[] = [
   { kind: 'number', key: 'waistCircumferenceIn', label: 'Waist', unit: 'in', step: '0.1' },
 ];
 
-const LUMEN_LEVEL_OPTIONS = [
-  { value: '', label: '—' },
-  { value: '1', label: '1 — Fat burn' },
-  { value: '2', label: '2' },
-  { value: '3', label: '3 — Mixed' },
-  { value: '4', label: '4' },
-  { value: '5', label: '5 — Carb burn' },
-];
-
-const LUMEN_FIELDS: Field[] = [
-  { kind: 'select', key: 'lumenMorningLevel', label: 'Morning Reading', options: LUMEN_LEVEL_OPTIONS },
-  { kind: 'select', key: 'lumenPeakLevel', label: 'Peak / Latest', options: LUMEN_LEVEL_OPTIONS },
-];
+const LUMEN_FIELDS: Field[] = [];
 
 const SOURCE_TABS: { value: string; label: string; icon: React.ReactNode; source: HealthSourceId; fields: Field[]; hint: string }[] = [
   { value: 'apple', label: 'Apple Health', icon: <Apple className="h-3.5 w-3.5" />, source: 'apple_health', fields: APPLE_FIELDS, hint: 'Steps, glucose, SpO2, ECG, sleep, water.' },
   { value: 'withings', label: 'Withings', icon: <Scale className="h-3.5 w-3.5" />, source: 'withings_scale', fields: WITHINGS_FIELDS, hint: 'Scale (weight + BF%), BPM Vision, BeamO temp.' },
-  { value: 'lumen', label: 'Lumen', icon: <Flame className="h-3.5 w-3.5" />, source: 'lumen', fields: LUMEN_FIELDS, hint: 'Metabolic flexibility (1 fat-burn → 5 carb-burn).' },
+  { value: 'lumen', label: 'Lumen', icon: <Flame className="h-3.5 w-3.5" />, source: 'lumen', fields: LUMEN_FIELDS, hint: 'Per-event metabolic readings (Wake Up → Bedtime).' },
 ];
 
 interface Props {
