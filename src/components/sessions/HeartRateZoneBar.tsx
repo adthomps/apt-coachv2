@@ -6,11 +6,11 @@ interface Props {
 }
 
 const ZONE_META = [
-  { label: 'Z1', hint: 'Recovery', color: 'bg-sky-500/70' },
-  { label: 'Z2', hint: 'Endurance', color: 'bg-success/70' },
-  { label: 'Z3', hint: 'Tempo', color: 'bg-warning/70' },
-  { label: 'Z4', hint: 'Threshold', color: 'bg-orange-500/70' },
-  { label: 'Z5', hint: 'VO2 max', color: 'bg-destructive/80' },
+  { label: 'Z1', hint: 'Recovery',   color: 'bg-muted-foreground/50' },
+  { label: 'Z2', hint: 'Endurance',  color: 'bg-success/70' },
+  { label: 'Z3', hint: 'Tempo',      color: 'bg-accent/70' },
+  { label: 'Z4', hint: 'Threshold',  color: 'bg-warning/80' },
+  { label: 'Z5', hint: 'VO2 max',    color: 'bg-destructive/80' },
 ];
 
 const fmt = (s: number) => {
