@@ -1,6 +1,6 @@
 import React from 'react';
 import { format, addDays, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   aiRefreshedAt?: string; // ISO
   onChangeDate: (date: string) => void;
   onRefreshAI: () => void;
+  onBackfill?: () => void;
   refreshing?: boolean;
 }
 
