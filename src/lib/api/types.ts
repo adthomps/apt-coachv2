@@ -518,6 +518,7 @@ export interface LumenReading {
   notes?: string;
 }
 
+export interface DailyVitals {
   /** SpO2 percentage. */
   bloodOxygenPct?: number;
   systolicMmHg?: number;
