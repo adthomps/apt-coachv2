@@ -35,8 +35,8 @@ const LumenView: React.FC = () => {
   }
 
   const latest = filtered[0];
-  const morningLevels = filtered.map(c => c.morningLumenLevel).filter((n): n is number => n !== undefined);
-  const peakLevels = filtered.map(c => c.lumenLevel).filter((n): n is number => n !== undefined);
+  const morningLevels: number[] = filtered.map(c => c.morningLumenLevel).filter((n): n is NonNullable<typeof n> => n !== undefined);
+  const peakLevels: number[] = filtered.map(c => c.lumenLevel).filter((n): n is NonNullable<typeof n> => n !== undefined);
   const flexScores = filtered.map(c => c.metabolicFlexScore).filter((n): n is number => n !== undefined);
 
   const morningAvg = morningLevels.length ? morningLevels.reduce((a, b) => a + b, 0) / morningLevels.length : undefined;
