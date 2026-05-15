@@ -109,6 +109,7 @@ const DexaView: React.FC = () => {
       }}
       insightsCount={insights.length}
       onInsightsClick={() => document.getElementById('insights')?.scrollIntoView({ behavior: 'smooth' })}
+    usedIn={[{ label: 'Today · training emphasis', href: '/today' }, { label: 'Dashboard · DEXA card', href: '/dashboard' }]}
     >
       {overlayChips.length > 0 && <CompanionOverlayStrip chips={overlayChips} />}
 

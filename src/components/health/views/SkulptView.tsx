@@ -71,6 +71,7 @@ const SkulptView: React.FC = () => {
     <SourcePageShell
       metaLine={<>SKULPT CHISEL · READING {format(new Date(selected.date), 'MMM d, yyyy').toUpperCase()}{previous && ` · vs ${format(new Date(previous.date), 'MMM d, yyyy').toUpperCase()}`}</>}
       compare={{ value: compareId, onChange: setCompareId, autoLabel: 'Previous reading (auto)', items: compareItems }}
+    usedIn={[{ label: 'Today · training emphasis', href: '/today' }, { label: 'Dashboard · DEXA card', href: '/dashboard' }]}
     >
       {overlay.length > 0 && <CompanionOverlayStrip chips={overlay} title="vs ground truth" />}
 
