@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import FormDialog from '@/components/common/FormDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -446,51 +446,43 @@ const Schedule = () => {
       </Sheet>
 
       {/* Schedule New Workout Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Schedule Workout</DialogTitle>
-            <DialogDescription>
-              {selectedDay ? `Scheduling for ${format(selectedDay, 'EEEE, MMMM d, yyyy')}` : 'Pick a workout to schedule'}
-            </DialogDescription>
-          </DialogHeader>
+      <FormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        size="md"
+        title="Schedule Workout"
+        description={selectedDay ? `Scheduling for ${format(selectedDay, 'EEEE, MMMM d, yyyy')}` : 'Pick a workout to schedule'}
+        submitLabel={createMutation.isPending ? 'Scheduling…' : 'Schedule'}
+        onSubmit={handleScheduleNew}
+        isSubmitting={createMutation.isPending}
+        canSubmit={!!newWorkoutId}
+      >
+        <div className="space-y-2">
+          <Label>Workout</Label>
+          <Select value={newWorkoutId} onValueChange={setNewWorkoutId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a workout" />
+            </SelectTrigger>
+            <SelectContent>
+              {workouts.map(w => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.name} ({w.estimatedDuration} min)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Workout</Label>
-              <Select value={newWorkoutId} onValueChange={setNewWorkoutId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a workout" />
-                </SelectTrigger>
-                <SelectContent>
-                  {workouts.map(w => (
-                    <SelectItem key={w.id} value={w.id}>
-                      {w.name} ({w.estimatedDuration} min)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Notes (optional)</Label>
-              <Textarea
-                value={newNotes}
-                onChange={e => setNewNotes(e.target.value)}
-                placeholder="Any notes for this session..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleScheduleNew} disabled={!newWorkoutId || createMutation.isPending}>
-              {createMutation.isPending ? 'Scheduling...' : 'Schedule'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <div className="space-y-2">
+          <Label>Notes (optional)</Label>
+          <Textarea
+            value={newNotes}
+            onChange={e => setNewNotes(e.target.value)}
+            placeholder="Any notes for this session..."
+            rows={3}
+          />
+        </div>
+      </FormDialog>
 
       <DeleteConfirmDialog
         open={!!deleteTarget}
