@@ -15,7 +15,7 @@ import ChangesTodayCard, { type ChangeNote } from '@/components/daily/ChangesTod
 import MonthDirectionCard, { type DirectionTile } from '@/components/daily/MonthDirectionCard';
 import DayGoalsCard, { type DayGoal } from '@/components/daily/DayGoalsCard';
 import {
-  useDailyLog, useAddMeal, useDeleteMeal, useSnapshots, useSchedule,
+  useDailyLog, useAddMeal, useUpdateMeal, useDeleteMeal, useSnapshots, useSchedule,
   useSessions, useActiveNutritionGoal, useBloodPanels,
 } from '@/hooks/use-api-queries';
 import { computeNutritionTargets, defaultTargets } from '@/lib/nutrition-targets';
@@ -43,6 +43,7 @@ const Today: React.FC = () => {
   const { data: bloodPanels = [] } = useBloodPanels();
   const { data: activeGoal = null } = useActiveNutritionGoal(date);
   const addMeal = useAddMeal();
+  const updateMeal = useUpdateMeal();
   const deleteMeal = useDeleteMeal();
 
   const [aiRefreshedAt, setAiRefreshedAt] = useState<string>(() => new Date().toISOString());
@@ -334,6 +335,7 @@ const Today: React.FC = () => {
                     slotLabel={MEAL_SLOT_LABELS[slot]}
                     entries={log?.meals[slot] ?? []}
                     onAdd={data => addMeal.mutate({ date, slot, entry: data })}
+                    onUpdate={(mealId, data) => updateMeal.mutate({ date, slot, mealId, patch: data })}
                     onDelete={mealId => deleteMeal.mutate({ date, slot, mealId })}
                   />
                 ))}

@@ -346,6 +346,15 @@ export function useAddMeal() {
   });
 }
 
+export function useUpdateMeal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, slot, mealId, patch }: { date: string; slot: MealSlot; mealId: string; patch: Partial<Omit<MealEntry, 'id' | 'timestamp'>> }) =>
+      dailyLogApi.updateMeal(date, slot, mealId, patch),
+    onSuccess: (_data, vars) => { qc.invalidateQueries({ queryKey: queryKeys.dailyLog(vars.date) }); },
+  });
+}
+
 export function useDeleteMeal() {
   const qc = useQueryClient();
   return useMutation({
