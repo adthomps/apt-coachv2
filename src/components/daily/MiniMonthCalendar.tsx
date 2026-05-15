@@ -66,7 +66,7 @@ const MiniMonthCalendar: React.FC<Props> = ({ selectedDate, onSelect, status = {
                 {dayStatus && inMonth && (
                   <span className={cn(
                     'absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full',
-                    dayStatus === 'complete' ? 'bg-success' : 'bg-amber-500',
+                    dayStatus === 'complete' ? 'bg-success' : 'bg-warning',
                   )} />
                 )}
               </button>
@@ -75,7 +75,7 @@ const MiniMonthCalendar: React.FC<Props> = ({ selectedDate, onSelect, status = {
         </div>
         <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Complete</span>
-          <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Partial</span>
+          <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-warning" /> Partial</span>
         </div>
         <p className="text-[10px] text-center text-muted-foreground">Tap any day to add or edit data.</p>
       </div>

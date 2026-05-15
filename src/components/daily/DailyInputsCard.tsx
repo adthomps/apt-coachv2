@@ -191,8 +191,8 @@ const StatusChip: React.FC<{
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
             logged
-              ? 'border-success/40 bg-success/10 text-success hover:bg-success/15'
-              : 'border-amber-500/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15',
+              ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/15'
+              : 'border-warning/40 bg-warning/10 text-warning hover:bg-warning/15',
           )}
         >
           {logged ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
