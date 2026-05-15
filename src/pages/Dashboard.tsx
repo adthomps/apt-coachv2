@@ -108,7 +108,7 @@ const Dashboard: React.FC = () => {
 
   // ---------- Signal chips ----------
   const oor = latestPanel?.markers.filter(m => m.status === 'outOfRange').length ?? 0;
-  const apoB = latestPanel?.markers.find(m => /apo\s*b/i.test(m.name));
+  const apoB = latestPanel?.markers.find(m => /apo\s*b/i.test(m.marker));
   const chips: SignalChip[] = [];
   if (compare) {
     const fat = compare.changes.fatMass.value;
