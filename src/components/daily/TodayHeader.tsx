@@ -30,7 +30,7 @@ const TodayHeader: React.FC<Props> = ({
         <h1 className="text-2xl font-bold text-foreground tracking-tight">{heading}</h1>
         <p className="text-xs text-muted-foreground mt-1 tabular-nums">
           {loggedCount} of {totalCount} inputs logged
-          {pending > 0 && <> · <span className="text-amber-500">{pending} pending</span></>}
+          {pending > 0 && <> · <span className="text-warning">{pending} pending</span></>}
           {' '}· AI refreshed {fmtTime(aiRefreshedAt)}
         </p>
       </div>

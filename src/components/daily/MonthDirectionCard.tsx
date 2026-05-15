@@ -17,7 +17,7 @@ interface Props {
 
 const STATUS_COLOR: Record<NonNullable<DirectionTile['status']>, string> = {
   good: 'text-success',
-  watch: 'text-amber-500',
+  watch: 'text-warning',
   act: 'text-destructive',
 };
 

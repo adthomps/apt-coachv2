@@ -13,14 +13,14 @@ const DailySignals: React.FC<DailySignalsProps> = ({ consumed, targets }) => {
 
   const proteinGap = targets.protein - consumed.protein;
   if (proteinGap > 30) {
-    signals.push({ icon: <AlertTriangle className="h-4 w-4 text-amber-500" />, text: `You're ${proteinGap}g short on protein — prioritize a high-protein meal.`, tone: 'warn' });
+    signals.push({ icon: <AlertTriangle className="h-4 w-4 text-warning" />, text: `You're ${proteinGap}g short on protein — prioritize a high-protein meal.`, tone: 'warn' });
   }
 
   const calGap = targets.calories - consumed.calories;
   if (calGap > 500) {
     signals.push({ icon: <TrendingDown className="h-4 w-4 text-muted-foreground" />, text: `${calGap} calories remaining — don't skip meals if on a maintenance or surplus goal.`, tone: 'info' });
   } else if (calGap < -300) {
-    signals.push({ icon: <TrendingUp className="h-4 w-4 text-amber-500" />, text: `${Math.abs(calGap)} calories over target — consider lighter choices for remaining meals.`, tone: 'warn' });
+    signals.push({ icon: <TrendingUp className="h-4 w-4 text-warning" />, text: `${Math.abs(calGap)} calories over target — consider lighter choices for remaining meals.`, tone: 'warn' });
   }
 
   if (consumed.protein >= targets.protein && consumed.calories <= targets.calories + 100) {

@@ -1,14 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+import FormDialog from '@/components/common/FormDialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { CheckCircle, XCircle, Upload, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { useCreateBloodPanel } from '@/hooks/use-api-queries';
 import { toast } from '@/hooks/use-toast';
 import type { BloodMarker, BloodMarkerStatus } from '@/lib/api/types';
@@ -130,87 +128,78 @@ const BloodPanelImportDialog: React.FC<BloodPanelImportDialogProps> = ({ open, o
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[750px] max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Import Blood Panel</DialogTitle>
-          <DialogDescription>
-            Paste CSV data from RythmHealth. Format: marker, value, unit, reference_range, status, time
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Import Blood Panel"
+      description="Paste CSV data from RythmHealth. Format: marker, value, unit, reference_range, status, time"
+      submitLabel={createMutation.isPending ? 'Saving…' : 'Import Panel'}
+      onSubmit={handleSave}
+      isSubmitting={createMutation.isPending}
+      canSubmit={!!parsed && parsed.markers.length > 0}
+      secondaryAction={
+        <Button variant="outline" onClick={handleParse} disabled={!csvData.trim()}>
+          Validate
+        </Button>
+      }
+    >
+      <Textarea
+        placeholder={`marker,value,unit,reference_range,status,time\nFree T3,4.25,pg/mL,2 - 4.4,optimal,2026-03-09\nApoB,131,mg/dL,0 - 90,outOfRange,2026-03-09`}
+        value={csvData}
+        onChange={e => { setCsvData(e.target.value); setParseErrors([]); }}
+        rows={8}
+        className="font-mono text-xs"
+      />
 
-        <div className="space-y-4">
-          <Textarea
-            placeholder={`marker,value,unit,reference_range,status,time\nFree T3,4.25,pg/mL,2 - 4.4,optimal,2026-03-09\nApoB,131,mg/dL,0 - 90,outOfRange,2026-03-09`}
-            value={csvData}
-            onChange={e => { setCsvData(e.target.value); setParseErrors([]); }}
-            rows={8}
-            className="font-mono text-xs"
-          />
-
-          {parseErrors.length > 0 && (
-            <div className="p-3 bg-destructive/10 rounded-lg space-y-1">
-              {parseErrors.map((err, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-destructive">
-                  <XCircle className="h-3 w-3 flex-shrink-0" />{err}
-                </div>
-              ))}
+      {parseErrors.length > 0 && (
+        <div className="p-3 bg-destructive/10 rounded-lg space-y-1">
+          {parseErrors.map((err, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm text-destructive">
+              <XCircle className="h-3 w-3 flex-shrink-0" />{err}
             </div>
-          )}
-
-          {parsed && parsed.markers.length > 0 && (
-            <>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle className="h-4 w-4 text-success" />
-                {parsed.markers.length} markers parsed
-                {parsed.markers.filter(m => m.status === 'outOfRange').length > 0 && (
-                  <span className="flex items-center gap-1 text-destructive">
-                    <AlertTriangle className="h-3 w-3" />
-                    {parsed.markers.filter(m => m.status === 'outOfRange').length} out of range
-                  </span>
-                )}
-              </div>
-
-              <div className="border border-border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Marker</TableHead>
-                      <TableHead className="text-right">Value</TableHead>
-                      <TableHead>Range</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {parsed.markers.map((m, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-medium text-sm">{m.marker}</TableCell>
-                        <TableCell className="text-right text-sm">{m.value} {m.unit}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{m.referenceRange}</TableCell>
-                        <TableCell>{statusBadge(m.status)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={handleParse} disabled={!csvData.trim()}>
-              Validate
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!parsed || parsed.markers.length === 0 || createMutation.isPending}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {createMutation.isPending ? 'Saving...' : 'Import Panel'}
-            </Button>
-          </div>
+          ))}
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {parsed && parsed.markers.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CheckCircle className="h-4 w-4 text-success" />
+            {parsed.markers.length} markers parsed
+            {parsed.markers.filter(m => m.status === 'outOfRange').length > 0 && (
+              <span className="flex items-center gap-1 text-destructive">
+                <AlertTriangle className="h-3 w-3" />
+                {parsed.markers.filter(m => m.status === 'outOfRange').length} out of range
+              </span>
+            )}
+          </div>
+
+          <div className="border border-border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Marker</TableHead>
+                  <TableHead className="text-right">Value</TableHead>
+                  <TableHead>Range</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {parsed.markers.map((m, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium text-sm">{m.marker}</TableCell>
+                    <TableCell className="text-right text-sm">{m.value} {m.unit}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{m.referenceRange}</TableCell>
+                    <TableCell>{statusBadge(m.status)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+    </FormDialog>
   );
 };
 

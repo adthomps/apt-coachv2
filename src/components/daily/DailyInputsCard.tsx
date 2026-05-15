@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import FormDialog from '@/components/common/FormDialog';
 import DailySignalsTabs from './DailySignalsTabs';
 import { useUpdateDailyVitals, useLogWeight } from '@/hooks/use-api-queries';
 import type { DailyVitals } from '@/lib/api/types';
@@ -191,8 +191,8 @@ const StatusChip: React.FC<{
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
             logged
-              ? 'border-success/40 bg-success/10 text-success hover:bg-success/15'
-              : 'border-amber-500/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15',
+              ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/15'
+              : 'border-warning/40 bg-warning/10 text-warning hover:bg-warning/15',
           )}
         >
           {logged ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
@@ -243,48 +243,51 @@ const HeadlineTile: React.FC<{
 };
 
 const DailyInputsCard: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
+  const [editAllOpen, setEditAllOpen] = useState(false);
   const headline = FIELDS.filter(f => f.headline);
   const chips = FIELDS;
 
   return (
-    <SectionCard
-      title={
-        <span className="text-sm uppercase tracking-wide text-muted-foreground font-semibold">
-          Daily Inputs
-        </span>
-      }
-      actions={
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Edit all
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Daily inputs · {date}</DialogTitle>
-              <DialogDescription>Edit all signals across Apple Health, Withings, and Lumen.</DialogDescription>
-            </DialogHeader>
-            <div className="mt-2">
-              <DailySignalsTabs date={date} vitals={vitals} bodyWeight={bodyWeight} />
-            </div>
-          </DialogContent>
-        </Dialog>
-      }
-    >
-      <div className="space-y-4">
-        <div className="flex flex-wrap gap-1.5">
-          {chips.map(f => (
-            <StatusChip key={f.id} field={f} date={date} vitals={vitals} bodyWeight={bodyWeight} />
-          ))}
+    <>
+      <SectionCard
+        title={
+          <span className="text-sm uppercase tracking-wide text-muted-foreground font-semibold">
+            Daily Inputs
+          </span>
+        }
+        actions={
+          <Button variant="outline" size="sm" onClick={() => setEditAllOpen(true)}>
+            <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Edit all
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-1.5">
+            {chips.map(f => (
+              <StatusChip key={f.id} field={f} date={date} vitals={vitals} bodyWeight={bodyWeight} />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/40">
+            {headline.map(f => (
+              <HeadlineTile key={f.id} field={f} date={date} vitals={vitals} bodyWeight={bodyWeight} />
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/40">
-          {headline.map(f => (
-            <HeadlineTile key={f.id} field={f} date={date} vitals={vitals} bodyWeight={bodyWeight} />
-          ))}
-        </div>
-      </div>
-    </SectionCard>
+      </SectionCard>
+
+      <FormDialog
+        open={editAllOpen}
+        onOpenChange={setEditAllOpen}
+        size="xl"
+        title={`Daily inputs · ${date}`}
+        description="Edit all signals across Apple Health, Withings, and Lumen. Changes save as you type."
+        submitLabel="Done"
+        cancelLabel="Close"
+        onSubmit={() => setEditAllOpen(false)}
+      >
+        <DailySignalsTabs date={date} vitals={vitals} bodyWeight={bodyWeight} />
+      </FormDialog>
+    </>
   );
 };
 

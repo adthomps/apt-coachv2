@@ -22,7 +22,7 @@ interface Props {
 
 const STATUS_META: Record<SignalStatus, { label: string; cls: string; dot: string }> = {
   act:   { label: 'Act',   cls: 'bg-destructive/15 text-destructive border-destructive/30', dot: 'bg-destructive' },
-  watch: { label: 'Watch', cls: 'bg-amber-500/15 text-amber-500 border-amber-500/30',       dot: 'bg-amber-500' },
+  watch: { label: 'Watch', cls: 'bg-warning/15 text-warning border-warning/30',       dot: 'bg-warning' },
   good:  { label: 'Good',  cls: 'bg-success/15 text-success border-success/30',             dot: 'bg-success' },
 };
 
