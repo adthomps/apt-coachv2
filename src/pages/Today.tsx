@@ -363,6 +363,14 @@ const Today: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <DayGoalsEditorDialog
+        open={dayGoalsOpen}
+        onOpenChange={setDayGoalsOpen}
+        date={date}
+        goals={log?.goals}
+        targets={targets}
+      />
     </Layout>
   );
 };
