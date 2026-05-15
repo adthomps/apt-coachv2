@@ -10,7 +10,6 @@ interface Props {
   onSelect: (date: string) => void;
   /** Map of YYYY-MM-DD → 'complete' | 'partial' */
   status?: Record<string, 'complete' | 'partial'>;
-  onBackfill?: () => void;
 }
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
