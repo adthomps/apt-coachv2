@@ -7,9 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from '@/components/ui/dialog';
+import FormDialog from '@/components/common/FormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,77 +80,69 @@ const WithingsImportDialog: React.FC<WithingsImportDialogProps> = ({ open, onOpe
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Scale className="h-5 w-5 text-primary" />Add Withings Reading
-          </DialogTitle>
-          <DialogDescription>
-            Manual entry from your Withings smart scale. Weight + body fat % are required; lean and bone mass are optional.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="wi-date">Reading Date</Label>
-              <Input id="wi-date" type="date" value={scanDate} onChange={(e) => setScanDate(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Units</Label>
-              <div className="flex gap-2">
-                {(['lbs', 'kg'] as const).map((u) => (
-                  <Button
-                    key={u}
-                    type="button"
-                    size="sm"
-                    variant={unit === u ? 'default' : 'outline'}
-                    onClick={() => setUnit(u)}
-                    className="flex-1 uppercase"
-                  >
-                    {u}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="wi-weight">Weight ({unit})</Label>
-              <Input id="wi-weight" type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder={unit === 'lbs' ? '185.0' : '84.0'} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="wi-bf">Body Fat %</Label>
-              <Input id="wi-bf" type="number" step="0.1" value={bodyFatPct} onChange={(e) => setBodyFatPct(e.target.value)} placeholder="18.5" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="wi-lean">Lean Mass ({unit}) — optional</Label>
-              <Input id="wi-lean" type="number" step="0.1" value={leanMass} onChange={(e) => setLeanMass(e.target.value)} placeholder="auto" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="wi-bone">Bone Mass ({unit}) — optional</Label>
-              <Input id="wi-bone" type="number" step="0.1" value={boneMass} onChange={(e) => setBoneMass(e.target.value)} placeholder="auto" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="wi-notes">Notes</Label>
-            <Textarea id="wi-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Morning, fasted, post-bathroom…" />
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <Button className="w-full" onClick={handleSave} disabled={createMutation.isPending}>
-            {createMutation.isPending ? 'Saving…' : 'Save Reading'}
-          </Button>
+    <FormDialog
+      open={open}
+      onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}
+      size="md"
+      title={<span className="flex items-center gap-2"><Scale className="h-5 w-5 text-primary" />Add Withings Reading</span>}
+      description="Manual entry from your Withings smart scale. Weight + body fat % are required; lean and bone mass are optional."
+      submitLabel={createMutation.isPending ? 'Saving…' : 'Save Reading'}
+      onSubmit={handleSave}
+      isSubmitting={createMutation.isPending}
+    >
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="wi-date">Reading Date</Label>
+          <Input id="wi-date" type="date" value={scanDate} onChange={(e) => setScanDate(e.target.value)} />
         </div>
-      </DialogContent>
-    </Dialog>
+        <div className="space-y-2">
+          <Label>Units</Label>
+          <div className="flex gap-2">
+            {(['lbs', 'kg'] as const).map((u) => (
+              <Button
+                key={u}
+                type="button"
+                size="sm"
+                variant={unit === u ? 'default' : 'outline'}
+                onClick={() => setUnit(u)}
+                className="flex-1 uppercase"
+              >
+                {u}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="wi-weight">Weight ({unit})</Label>
+          <Input id="wi-weight" type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder={unit === 'lbs' ? '185.0' : '84.0'} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="wi-bf">Body Fat %</Label>
+          <Input id="wi-bf" type="number" step="0.1" value={bodyFatPct} onChange={(e) => setBodyFatPct(e.target.value)} placeholder="18.5" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="wi-lean">Lean Mass ({unit}) — optional</Label>
+          <Input id="wi-lean" type="number" step="0.1" value={leanMass} onChange={(e) => setLeanMass(e.target.value)} placeholder="auto" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="wi-bone">Bone Mass ({unit}) — optional</Label>
+          <Input id="wi-bone" type="number" step="0.1" value={boneMass} onChange={(e) => setBoneMass(e.target.value)} placeholder="auto" />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="wi-notes">Notes</Label>
+        <Textarea id="wi-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Morning, fasted, post-bathroom…" />
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </FormDialog>
   );
 };
 
