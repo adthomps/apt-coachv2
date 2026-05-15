@@ -349,7 +349,7 @@ const Today: React.FC = () => {
               selectedDate={date}
               onSelect={setDate}
               status={log ? { [date]: loggedCount === DAILY_INPUT_TOTAL ? 'complete' : loggedCount > 0 ? 'partial' : undefined } as Record<string, 'complete' | 'partial'> : {}}
-              onBackfill={() => navigate('/schedule')}
+              
             />
             <YearMonthSignalsCard signals={signals} onMoreInfo={() => navigate('/health')} />
             <MonthDirectionCard tiles={monthTiles} />
