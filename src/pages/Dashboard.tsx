@@ -327,7 +327,7 @@ const Dashboard: React.FC = () => {
             priorityMetricKey={bodyInsights[0]?.metricKey}
             food={dexaTopFood?.title ?? null}
             meta={latestDexa ? format(new Date(latestDexa.scanDate), 'MMM d, yyyy') : null}
-            href="/health"
+            href="/health?source=dexa"
           />
           <SourceSummaryCard
             title="Rythm Health"
