@@ -38,15 +38,15 @@ interface FieldDef {
 }
 
 const FIELDS: FieldDef[] = [
-  { id: 'weight', kind: 'weight', label: 'Weight', short: 'Weight', source: 'Withings', icon: <Scale className="h-3.5 w-3.5" />, unit: 'lbs', step: '0.1', headline: true,
+  { id: 'weight', kind: 'weight', label: 'Weight', short: 'Weight', source: 'Withings Scale', icon: <Scale className="h-3.5 w-3.5" />, unit: 'lbs', step: '0.1', headline: true,
     format: v => `${v.toFixed(1)} lbs` },
-  { id: 'withingsBodyFatPct', kind: 'number', vitalKey: 'withingsBodyFatPct', label: 'Body scan', short: 'Body fat', source: 'Withings', icon: <Activity className="h-3.5 w-3.5" />, unit: '%', step: '0.1', headline: true,
+  { id: 'withingsBodyFatPct', kind: 'number', vitalKey: 'withingsBodyFatPct', label: 'Body scan', short: 'Body scan', source: 'Withings Scale', icon: <Activity className="h-3.5 w-3.5" />, unit: '%', step: '0.1', headline: true,
     format: v => `${v.toFixed(1)}%` },
-  { id: 'bp', kind: 'bp', label: 'Blood pressure', short: 'BP', source: 'BPM Vision', icon: <HeartPulse className="h-3.5 w-3.5" />, headline: true,
+  { id: 'bp', kind: 'bp', label: 'Blood pressure', short: 'BP', source: 'Withings BPM Vision', icon: <HeartPulse className="h-3.5 w-3.5" />, headline: true,
     format: () => '' },
   { id: 'stepsCount', kind: 'number', vitalKey: 'stepsCount', label: 'Steps', short: 'Steps', source: 'Apple Health', icon: <Footprints className="h-3.5 w-3.5" />, headline: true,
     format: v => v.toLocaleString() },
-  { id: 'bodyTempF', kind: 'number', vitalKey: 'bodyTempF', label: 'Temperature', short: 'Temp', source: 'BeamO', icon: <Thermometer className="h-3.5 w-3.5" />, unit: '°F', step: '0.1',
+  { id: 'bodyTempF', kind: 'number', vitalKey: 'bodyTempF', label: 'Temperature', short: 'Temp', source: 'Withings BeamO', icon: <Thermometer className="h-3.5 w-3.5" />, unit: '°F', step: '0.1',
     format: v => `${v.toFixed(1)}°F` },
   { id: 'lumenMorningLevel', kind: 'select', vitalKey: 'lumenMorningLevel', label: 'Lumen score', short: 'Lumen', source: 'Lumen', icon: <Flame className="h-3.5 w-3.5" />,
     selectOptions: [1,2,3,4,5].map(n => ({ value: String(n), label: `${n} ${n===1?'(fat)':n===5?'(carb)':''}` })),
@@ -59,6 +59,13 @@ const FIELDS: FieldDef[] = [
     format: v => `${v.toFixed(0)} mg/dL` },
   { id: 'bloodOxygenPct', kind: 'number', vitalKey: 'bloodOxygenPct', label: 'Blood oxygen', short: 'SpO₂', source: 'Apple Health', icon: <Wind className="h-3.5 w-3.5" />, unit: '%', step: '0.1',
     format: v => `${v.toFixed(0)}%` },
+  { id: 'ecgRhythm', kind: 'select', vitalKey: 'ecgRhythm', label: 'ECG rhythm', short: 'ECG', source: 'Apple Health', icon: <Waves className="h-3.5 w-3.5" />,
+    selectOptions: [
+      { value: 'normal', label: 'Normal sinus' },
+      { value: 'afib', label: 'AFib' },
+      { value: 'inconclusive', label: 'Inconclusive' },
+    ],
+    format: v => String(v) },
   { id: 'respiratoryRateBrpm', kind: 'number', vitalKey: 'respiratoryRateBrpm', label: 'Respiratory rate', short: 'Resp', source: 'Apple Health', icon: <Wind className="h-3.5 w-3.5" />, unit: 'brpm', step: '0.1',
     format: v => `${v.toFixed(0)} brpm` },
   { id: 'restingHeartRate', kind: 'number', vitalKey: 'restingHeartRate', label: 'Resting HR', short: 'RHR', source: 'Apple Health', icon: <HeartPulse className="h-3.5 w-3.5" />, unit: 'bpm',
