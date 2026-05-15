@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, parseISO, startOfMonth, startOfWeek, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SectionCard from '@/components/common/SectionCard';
 import { cn } from '@/lib/utils';
@@ -10,12 +10,11 @@ interface Props {
   onSelect: (date: string) => void;
   /** Map of YYYY-MM-DD → 'complete' | 'partial' */
   status?: Record<string, 'complete' | 'partial'>;
-  onBackfill?: () => void;
 }
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-const MiniMonthCalendar: React.FC<Props> = ({ selectedDate, onSelect, status = {}, onBackfill }) => {
+const MiniMonthCalendar: React.FC<Props> = ({ selectedDate, onSelect, status = {} }) => {
   const sel = parseISO(selectedDate);
   const [cursor, setCursor] = useState(() => startOfMonth(sel));
 
@@ -78,9 +77,7 @@ const MiniMonthCalendar: React.FC<Props> = ({ selectedDate, onSelect, status = {
           <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Complete</span>
           <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Partial</span>
         </div>
-        <Button variant="outline" size="sm" className="w-full" onClick={onBackfill}>
-          <CalendarDays className="h-4 w-4 mr-1.5" /> View / back fill past days
-        </Button>
+        <p className="text-[10px] text-center text-muted-foreground">Tap any day to add or edit data.</p>
       </div>
     </SectionCard>
   );
