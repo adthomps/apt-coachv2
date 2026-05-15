@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { CheckCircle, XCircle, Upload, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { useCreateBloodPanel } from '@/hooks/use-api-queries';
 import { toast } from '@/hooks/use-toast';
 import type { BloodMarker, BloodMarkerStatus } from '@/lib/api/types';
