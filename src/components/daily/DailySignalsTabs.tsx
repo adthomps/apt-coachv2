@@ -75,9 +75,10 @@ interface Props {
   date: string;
   vitals?: DailyVitals;
   bodyWeight?: number;
+  defaultTab?: 'apple' | 'withings' | 'lumen';
 }
 
-const DailySignalsTabs: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
+const DailySignalsTabs: React.FC<Props> = ({ date, vitals, bodyWeight, defaultTab = 'apple' }) => {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [weightDraft, setWeightDraft] = useState('');
   const update = useUpdateDailyVitals();
@@ -176,7 +177,7 @@ const DailySignalsTabs: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
   };
 
   return (
-    <Tabs defaultValue="apple" className="w-full">
+    <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="grid grid-cols-3 w-full sm:w-auto">
         {SOURCE_TABS.map(t => (
           <TabsTrigger key={t.value} value={t.value} className="text-xs gap-1.5">
@@ -197,9 +198,13 @@ const DailySignalsTabs: React.FC<Props> = ({ date, vitals, bodyWeight }) => {
             </div>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Manual entry</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {tab.fields.map(renderField)}
-          </div>
+          {tab.value === 'lumen' ? (
+            <LumenEventsEditor date={date} vitals={vitals} />
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {tab.fields.map(renderField)}
+            </div>
+          )}
         </TabsContent>
       ))}
     </Tabs>
