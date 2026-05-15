@@ -1,87 +1,165 @@
-# APT Conformance Pass + Today/Dashboard ↔ Health Linkage
+# APT Alignment Plan — Thinking, Design, File Structure (Cloudflare-Ready)
 
-Two coordinated workstreams: (1) audit every UI surface against APT color & interaction rules, (2) make insights/data bidirectionally navigable between Today, Dashboard, and the new per-source Health views.
+Reorganize the repo so it follows APT doctrine (`thinking.md`, `design.md`, `architecture.md`, `system-standards.md`) and slots cleanly into the APT Cloudflare baseline (Pages + Workers + D1/KV/R2) — without breaking the current mock/demo running on Vite.
 
-## 1. APT Color & Interaction Audit
+The key insight: APT's `apps/` + `packages/` monorepo split, the responsibility map, and the mock-vs-real boundary are already partially reflected (`http-client.ts` has a `USE_MOCK_API` flag). We need to formalize boundaries, evict business logic from UI, version the prompts, and document each layer.
 
-APT rules (from `apt-principles/design.md` + `references/design-tokens.json`):
-- **Blue (220)** = brand, primary CTAs, links, focus rings, active nav.
-- **Accent/teal (165)** = section identity, selection, success, badges, chart accents — never the default CTA.
-- **Semantic feedback** (success / warning / destructive) only for state, never decoration.
-- **Disabled** = reduced contrast, never hidden.
-- **Calm motion only**; subtle fade / hover lift; 140–220ms.
-- **No raw colors**; semantic tokens only.
+## Workstream 1 — Project Doctrine (External Alignment)
 
-### Findings to fix
+Add an APT adoption layer at the repo root. These files declare how this project applies APT canonical doctrine; they don't change runtime behavior.
 
-| File | Issue | Fix |
+```text
+docs/apt/
+  README.md                     # Pointer to apt-principles canonical source
+  adoption.md                   # What APT layers this project adopts (and exceptions)
+  decisions/
+    0001-mock-first-frontend.md
+    0002-cloudflare-target-stack.md
+    0003-blue-primary-teal-accent.md
+    0004-roles-table-deferred.md
+  responsibility-matrix.md      # APT responsibility map filled in for this repo
+  boundary-map.md               # Which folder owns what; forbidden import directions
+  state-map.md                  # Required UI states per feature (loading/empty/error/...)
+references/
+  design-tokens.json            # Mirror of APT tokens (already in src/index.css; this is the portable contract)
+  architecture-map.json         # Boundary + ownership in machine-readable form
+```
+
+These satisfy APT's "Required Artifacts" for both Design and Architecture without forcing a monorepo split today.
+
+## Workstream 2 — Internal File Structure (Cloudflare-Ready, Mock Intact)
+
+Goal: introduce the `apps/web` + `packages/*` shape APT recommends, but stage it so day-1 the existing Vite app keeps working unchanged.
+
+### Phase A — Logical layering inside `src/` (no folder move yet)
+
+Re-organize `src/lib` to make the Cloudflare boundary explicit:
+
+```text
+src/
+  features/                  # NEW — feature-vertical slices (UI + hooks + view-models)
+    today/
+    dashboard/
+    health/
+    training/
+    schedule/
+  services/                  # NEW — frontend service layer; the ONLY place that calls api client
+    healthService.ts
+    trainingService.ts
+    scheduleService.ts
+    nutritionService.ts
+  domain/                    # NEW — pure business logic, framework-free, portable to Worker
+    protocol.ts              # moved from src/lib/protocol.ts
+    blood-marker-engine.ts
+    adaptive-engine.ts
+    nutrition-targets.ts
+    schedule-sync.ts
+    selectors/health.ts
+    ai/
+      insights.ts
+      session-insights.ts
+      prompts/               # NEW — versioned prompt files (one .md per prompt)
+        body-scan-summary.v1.md
+        blood-panel-summary.v1.md
+  data/                      # renamed from src/lib/api
+    types.ts                 # canonical contracts (becomes the worker/D1 source of truth)
+    http-client.ts           # transport + auth header injection
+    mock/
+      client.ts              # current mock client
+      fixtures.ts            # current mock-data.ts
+    real/
+      client.ts              # NEW shell — implements same interface against /api
+    index.ts                 # picks mock vs real based on USE_MOCK_API
+  ui/                        # shadcn primitives + APT presentational components only
+    primitives/              # current src/components/ui
+    apt/                     # SectionCard, KpiHeroTile, ToneChip, SourceBadge, …
+  pages/                     # route shells only — no business logic, no fetch
+  hooks/
+  contexts/
+  index.css
+  main.tsx
+  App.tsx
+```
+
+### Phase B — Forbidden-import rules (enforced via ESLint `no-restricted-imports`)
+
+| From → To | Allowed? | Rationale |
 |---|---|---|
-| `pages/NotFound.tsx` | `text-blue-500/700` raw color | `text-primary hover:text-primary-hover` |
-| `components/sessions/HeartRateZoneBar.tsx` | `bg-sky-500/70`, `bg-orange-500/70` raw | Map zones to semantic tokens (`primary`, `accent`, `warning`, `destructive`) |
-| `components/ui/toast.tsx` | shadcn default `red-300/50/400/600` inside destructive variant | Replace with `destructive`/`destructive-foreground` aliases |
-| Dashboard / Health value-compare chips | Already use `success`/`destructive`/`warning`/`muted` — keep, but unify the `fav/unfav/neutral` vs `delta` chip styles into one shared `<ToneChip>` so every page renders compares identically |
-| Selected/active states across `HealthSourceTabs`, dashboard cards, chips | Today some use `primary`, some `accent`. Per APT: **selection/section identity = accent (teal)**, **primary CTA = blue**. Standardize: tabs/segmented active state → accent; buttons/links → primary |
-| Focus rings | Confirm `focus-visible:ring-ring` everywhere; add to custom buttons in `KpiHeroTile`, `SourcePageShell` jump-to-insights |
-| Motion | Audit any `duration-500/700` on hover; cap at `duration-200` per APT 140–220ms |
+| `pages/**` → `data/**` directly | NO | Pages must go through `services/**` or `hooks/**` |
+| `ui/**` → `services/**` or `data/**` | NO | UI is presentational; no business calls |
+| `domain/**` → `react`, `react-router-dom`, `@/hooks` | NO | Domain must be portable to Worker |
+| `domain/**` → `data/**` | NO | Domain operates on plain types, not the transport |
+| `features/**` → other `features/**/internals` | NO | Cross-feature uses public exports only |
 
-### New shared primitive
+A single `.eslintrc` block + `eslint-plugin-boundaries` (or `import/no-restricted-paths`) makes these guardrails real.
 
-`src/components/apt/ToneChip.tsx` — single source of truth for value-compare chips:
-- `tone: 'fav' | 'unfav' | 'neutral' | 'warning'` (semantic, not color names)
-- consistent radius, padding, arrow icon, aria-label for screen readers
-- replaces ad-hoc chip styles in `KpiHeroTile`, `SourceSummaryCard`, `SignalChipStrip`, `DeltaValue`
+### Phase C — Mock/real switch hardening
 
-### Active-state convention (documented in `index.css` comment block)
+`src/data/index.ts` becomes the single switch:
 
-- Pill/tab active background: `bg-accent/15 text-accent border-accent/30`
-- Primary CTA: `bg-primary text-primary-foreground hover:bg-primary-hover`
-- Link: `text-primary underline-offset-4 hover:underline`
+```ts
+export const api = USE_MOCK_API ? mockClient : realClient;
+```
 
-## 2. Today ↔ Dashboard ↔ Health Linkage
+`realClient` ships as a thin TODO shell that throws "not implemented" per method — present so the boundary exists, dormant until a Worker is wired. This is the only file that needs to change on cutover.
 
-Currently Health source views consume `useSnapshots`, `useBloodPanels`, `useHealthCheckins`, but Today and Dashboard don't deep-link into them, and the source views don't surface today's checkin context.
+### Phase D — Cloudflare cutover map (deferred work, documented now)
 
-### A. From Dashboard / Today → Health (deep links)
+Document — but do not yet create — the eventual layout:
 
-- `SourceSummaryCard` (Dashboard) — wrap each card title + "View details" affordance with `<Link to="/health?source={dexa|rythm|withings-scale|...}">`.
-- Dashboard `Insight` items (body scan + blood panel) → each insight gets a "See in Health" link to the relevant source view.
-- Today's protocol recommendation card → "Why this?" link to `/health?source=rythm` (or whichever source drove the recommendation).
-- Today's body-comp summary chip → links to `/health?source=dexa`.
+```text
+apps/
+  web/                # current Vite app (move src/ here)
+  worker/             # NEW Hono worker
+    src/
+      routes/         # thin transport layer
+      services/       # owns business logic — imports from packages/domain
+      middleware/
+      index.ts
+packages/
+  domain/             # promote src/domain/ to a package — same code, no React
+  data-contracts/     # promote src/data/types.ts to a package — shared by web + worker
+  ui/                 # optional later: extract APT components
+  config/             # tokens, env helpers
+```
 
-### B. Health page accepts `?source=` query param
+Because `src/domain/` and `src/data/types.ts` already have zero React/router dependencies (after Phase A), the Phase D promotion is a `git mv` + `package.json` work — no logic change.
 
-- `Health.tsx` reads `useSearchParams` → seeds `HealthSourceTabs` initial selection.
-- Subsequent tab changes update the URL (`replace: true`) so links are shareable and back/forward works.
+## Workstream 3 — APT Design Conformance (Internal)
 
-### C. From Health → Today/Dashboard (back-references)
+A few residual gaps from the previous APT pass:
 
-Each source view's `SourcePageShell` gets a small "Used in" footer strip:
-- DEXA / Skulpt / Withings Scale → "Drives today's training emphasis" → `/today`
-- Rythm Blood → "Informs today's food guidance" → `/today`
-- Apple / Withings BeamO → "Feeds dashboard recovery signal" → `/dashboard`
+- **State-map coverage**: each major page declares its loading / empty / error / disabled / permission states in `docs/apt/state-map.md`; missing states get added (DEXA error retry, panel parse-error, today offline banner).
+- **`ui/apt/ToneChip`**: extract the chip rendering currently duplicated across `KpiHeroTile`, `SignalChipStrip`, `SourceSummaryCard`, `DeltaValue`. Single semantic-tone component.
+- **Header/footer template parity**: confirm Layout matches the APT hybrid header contract (sticky, `bg-card/80`, backdrop blur, `h-14`–`h-16`, route-aware active state in accent).
+- **Prompts**: move every inline prompt/template (currently embedded in `lib/ai/insights.ts`) into `domain/ai/prompts/*.md` with a version header. Loader reads the file at build time.
 
-### D. Shared selectors so numbers match exactly
+## Workstream 4 — Quiet Compliance Fixes
 
-Create `src/lib/selectors/health.ts`:
-- `selectLatestSnapshot(snapshots)` — single canonical "latest DEXA"
-- `selectComparePair(snapshots, mode)` — returns `{ current, baseline }` used by both Dashboard `SourceSummaryCard` and Health `DexaView` so deltas are always identical.
-- `selectLatestPanel(panels)`, `selectPanelComparePair(panels, mode)`.
-- `selectTodayCheckin(checkins)` — used by Today and by `CompanionOverlayStrip` so the "today's weight" overlay on DEXA matches the number on Today.
+Discovered while exploring; fix as part of this pass:
 
-Refactor `Dashboard.tsx`, `Today.tsx`, and the source views to consume these selectors instead of inline `.sort()[0]` patterns. This is the structural fix that guarantees the same number shows in all three places.
+- `src/components/health/views/RythmBloodView.tsx` calls `useMemo` after two early returns → currently throws "Rendered more hooks than during the previous render." Move the `topChanges` `useMemo` above the early returns.
 
-### E. Insight provenance
+## Out of Scope (Deferred to a Later Plan)
 
-Add an optional `source: HealthSourceId` field on the existing `Insight` type produced by `getBodyScanInsights` / `getBloodPanelInsights`. Dashboard/Today render the source as a small `<SourceBadge>` next to each insight, and the badge is the deep link.
+- Actually creating `apps/` and `packages/` directories — Phase D is documented only.
+- Building the Hono worker, D1 schema, R2 bucket.
+- Auth provider integration (Lovable Cloud) — captured as decision 0004.
+- Light-mode visual audit beyond what's already in `index.css`.
+- Replacing the deterministic engines with LLM calls.
 
-## Out of Scope
+## Risk & Containment (per APT Change Containment)
 
-- No new data sources or API changes.
-- No edits to importer schemas.
-- No mobile redesign; responsive parity only.
-- No light-mode work beyond ensuring tokens already defined still render.
+- **Low risk**: doctrine docs, ESLint rules, ToneChip extraction, hook-order fix.
+- **Medium risk**: folder reorganization inside `src/` (Phase A) — done as one commit per top-level move with import-path updates verified by `tsc`.
+- **High risk (deferred)**: monorepo extraction (Phase D), real backend cutover. Both gated behind decision records.
 
-## Files Touched (estimate)
+## Deliverables
 
-New: `src/components/apt/ToneChip.tsx`, `src/lib/selectors/health.ts`.
-Edited: `pages/NotFound.tsx`, `pages/Today.tsx`, `pages/Dashboard.tsx`, `pages/Health.tsx`, `components/sessions/HeartRateZoneBar.tsx`, `components/ui/toast.tsx`, all `components/health/views/*`, `components/health/KpiHeroTile.tsx`, `components/health/HealthSourceTabs.tsx`, `components/health/SourcePageShell.tsx`, `components/dashboard/SourceSummaryCard.tsx`, `components/dashboard/SignalChipStrip.tsx`, `lib/ai/insights.ts` (add source field), `index.css` (active-state convention comment).
+1. `docs/apt/` + `references/` doctrine package committed.
+2. `src/` reorganized into `features/`, `services/`, `domain/`, `data/`, `ui/` with all imports updated.
+3. ESLint boundary rules enforcing the responsibility map.
+4. `domain/ai/prompts/*.md` extracted; insights loader reads them.
+5. RythmBloodView hook-order bug fixed.
+6. Phase D Cloudflare cutover map written but not executed.
+7. Mock demo unchanged: `USE_MOCK_API = true` still works end-to-end.

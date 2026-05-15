@@ -1,0 +1,34 @@
+{
+  "$schema": "https://apt-principles.dev/schemas/design-tokens.v1.json",
+  "project": "apt-coach-v2",
+  "colorSpace": "hsl",
+  "tokens": {
+    "background":            "222 47% 6%",
+    "foreground":            "210 40% 98%",
+    "card":                  "222 47% 8%",
+    "muted":                 "217 33% 18%",
+    "muted-foreground":      "215 20% 65%",
+    "primary":               "217 91% 60%",
+    "primary-foreground":    "210 40% 98%",
+    "primary-hover":         "217 91% 55%",
+    "accent":                "173 80% 40%",
+    "accent-foreground":     "210 40% 98%",
+    "success":               "142 76% 36%",
+    "warning":               "38 92% 50%",
+    "destructive":           "0 84% 60%",
+    "destructive-foreground":"210 40% 98%",
+    "border":                "217 33% 18%",
+    "ring":                  "217 91% 60%"
+  },
+  "conventions": {
+    "activeTab":   "bg-accent/15 text-accent border-accent/30",
+    "primaryCta":  "bg-primary text-primary-foreground hover:bg-primary-hover",
+    "inlineLink":  "text-primary underline-offset-4 hover:underline",
+    "favTone":     "text-success",
+    "unfavTone":   "text-destructive",
+    "neutralTone": "text-muted-foreground",
+    "warnTone":    "text-warning"
+  },
+  "source": "src/index.css (HSL custom properties)",
+  "notes": "This file is the portable contract. Components must consume tokens via Tailwind semantic classes; never raw color literals."
+}

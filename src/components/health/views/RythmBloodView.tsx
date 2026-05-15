@@ -23,6 +23,21 @@ const RythmBloodView: React.FC = () => {
 
   const insights = useMemo(() => (selected ? getBloodPanelInsights(selected) : []), [selected]);
 
+  // Top 3 changed markers vs previous (must be before any early return — Rules of Hooks)
+  const topChanges = useMemo(() => {
+    if (!selected || !previous) return [] as Array<{ marker: string; current: number; prev: number; delta: number; unit: string; status: string }>;
+    return selected.markers
+      .map(m => {
+        const prev = previous.markers.find(p => p.marker === m.marker);
+        if (!prev) return null;
+        const delta = m.value - prev.value;
+        return { marker: m.marker, current: m.value, prev: prev.value, delta, unit: m.unit, status: m.status };
+      })
+      .filter(Boolean)
+      .sort((a, b) => Math.abs((b!.delta / Math.max(b!.prev, 0.001))) - Math.abs((a!.delta / Math.max(a!.prev, 0.001))))
+      .slice(0, 3) as Array<{ marker: string; current: number; prev: number; delta: number; unit: string; status: string }>;
+  }, [selected, previous]);
+
   if (sorted.length === 0) {
     return (
       <EmptyState
@@ -46,21 +61,6 @@ const RythmBloodView: React.FC = () => {
     label: format(new Date(p.panelDate), 'MMM d, yyyy'),
     hint: `${p.markers.filter(m => m.status === 'outOfRange').length} flagged`,
   }));
-
-  // Top 3 changed markers vs previous
-  const topChanges = useMemo(() => {
-    if (!previous) return [];
-    return selected.markers
-      .map(m => {
-        const prev = previous.markers.find(p => p.marker === m.marker);
-        if (!prev) return null;
-        const delta = m.value - prev.value;
-        return { marker: m.marker, current: m.value, prev: prev.value, delta, unit: m.unit, status: m.status };
-      })
-      .filter(Boolean)
-      .sort((a, b) => Math.abs((b!.delta / Math.max(b!.prev, 0.001))) - Math.abs((a!.delta / Math.max(a!.prev, 0.001))))
-      .slice(0, 3) as Array<{ marker: string; current: number; prev: number; delta: number; unit: string; status: string }>;
-  }, [selected, previous]);
 
   const meta = (
     <>
