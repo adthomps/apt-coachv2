@@ -569,12 +569,20 @@ export const VITAL_FIELD_LABELS: Record<keyof Omit<DailyVitals, 'notes' | 'ecgRh
   withingsWeightLbs: 'Withings Weight (lbs)',
 };
 
+export interface DayGoals {
+  proteinG?: number;
+  steps?: number;
+  waterL?: number;
+  sessionNote?: string;
+}
+
 export interface DailyLog {
   id: string;
   date: string; // YYYY-MM-DD
   meals: Record<MealSlot, MealEntry[]>;
   bodyWeight?: number; // lbs
   vitals?: DailyVitals;
+  goals?: DayGoals;
   notes?: string;
 }
 
