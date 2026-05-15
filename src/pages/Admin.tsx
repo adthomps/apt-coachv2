@@ -208,7 +208,8 @@ const Admin: React.FC = () => {
           });
         }
       } else if (source === 'blood_panel') {
-        const result = parseRythmHealthCsv(rawText);
+        const isJson = rawText.trim().startsWith('{') || rawText.trim().startsWith('[');
+        const result = isJson ? parseRythmHealthJson(rawText) : parseRythmHealthCsv(rawText);
         if (result.errors.length > 0) setErrors(result.errors);
         if (result.data) {
           setPreview({
